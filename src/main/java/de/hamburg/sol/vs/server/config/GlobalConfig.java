@@ -1,4 +1,4 @@
-package de.hamburg.sol.vs.config;
+package de.hamburg.sol.vs.server.config;
 
 public class GlobalConfig {
 
@@ -11,8 +11,12 @@ public class GlobalConfig {
         return DEFAULT_STARPORT + GROUP_ID;
     }
 
-    public static int getSpecificStar_Port(int port){
+    public static int getStar_Port(int port){
         return port + GROUP_ID;
+    }
+
+    public static int getGroupId(){
+        return GROUP_ID;
     }
 
 
