@@ -1,5 +1,8 @@
 package de.hamburg.sol.vs.server.instance.response;
 
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
 public class SolResponse {
 
     //STAR_UUID
@@ -12,6 +15,7 @@ public class SolResponse {
     private int solPort;
     //COM_UUID der neuen Komponente
     private int comUUID;
+
 
 
     public SolResponse(String star, int sol, String solIpAddress, int solPort, int comUUID) {
