@@ -1,4 +1,4 @@
-package de.hamburg.sol.vs.server.config;
+package de.hamburg.sol.vs.config;
 
 public class GlobalConfig {
 

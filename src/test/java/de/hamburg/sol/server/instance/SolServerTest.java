@@ -2,28 +2,32 @@ package de.hamburg.sol.server.instance;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hamburg.sol.vs.server.instance.SolServer;
-import de.hamburg.sol.vs.server.instance.response.SolResponse;
-import org.junit.jupiter.api.BeforeAll;
+import de.hamburg.sol.vs.protocol.SolProtocol;
+import de.hamburg.sol.vs.utils.ProtocolHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 
-import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static de.hamburg.sol.vs.server.config.GlobalConfig.*;
+import static de.hamburg.sol.vs.config.GlobalConfig.*;
 
+@SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class SolServerTest {
 
-
+    @Autowired
+    private ApplicationContext applicationContext;
+    @Autowired
     private SolServer server;
     private DatagramSocket mockSocket;
-    private ObjectMapper objectMapper;
     private String responseJSON;
     private byte[] data;
 
@@ -33,17 +37,15 @@ public class SolServerTest {
     @BeforeEach
     public void setUp() throws IllegalAccessException, SocketException {
         mockSocket = mock(DatagramSocket.class);
-        server = SolServer.getInstance(4);
         server.setUdpSocket(mockSocket);
-        objectMapper = new ObjectMapper();
 
     }
 
     @Test
     public void testSingletonInstance() throws IllegalAccessException {
         try {
-            SolServer instance1 = SolServer.getInstance(4);
-            SolServer instance2 = SolServer.getInstance(4);
+            SolServer instance1 = applicationContext.getBean(SolServer.class);
+            SolServer instance2 = applicationContext.getBean(SolServer.class);
             assertSame(instance1, instance2);
         } catch(Exception e){
             e.printStackTrace();
@@ -85,8 +87,6 @@ public class SolServerTest {
             data = "HELLO?".getBytes();
 
             mockUpReceiveMethod(data);
-
-
             startAndStopServer();
 
             //Fangt DatagramPacket ab
@@ -101,13 +101,14 @@ public class SolServerTest {
             String receivedMessage = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
             System.out.println(receivedMessage);
 
-            SolResponse solResponse = objectMapper.readValue(receivedMessage, SolResponse.class);
+            //SolResponse solResponse = objectMapper.readValue(receivedMessage, SolResponse.class);
+            SolProtocol solProtocol = ProtocolHandler.convertJsonToObject(receivedMessage, SolProtocol.class);
 
             //Überprüft, ob die SolResponse
-            assertTrue(packet.getPort() == getStarPort());
-            assertTrue(solResponse.getSol() == server.getComUUID());
 
-            verify(mockSocket, times(1)).receive(any(DatagramPacket.class));
+            assertTrue(packet.getPort() == getStarPort());
+            assertEquals(solProtocol.getSol(), server.getComUUID());
+            verify(mockSocket, atLeast(1)).receive(any(DatagramPacket.class));
 
 
         } catch (Exception e){
@@ -116,11 +117,15 @@ public class SolServerTest {
     }
 
     private void startAndStopServer() throws InterruptedException {
-        //Server starten und nach 100ms schließen
-        Thread serverThread = new Thread(server);
+        Thread serverThread = new Thread(() -> {
+            server.listenForBroadcastsRequests();
+        });
         serverThread.start();
         Thread.sleep(200);
+        server.stopServer();
         serverThread.join();
+        System.out.println("Gestoppt");
+
     }
 
     private void mockUpReceiveMethod(byte[] data){

@@ -1,17 +1,24 @@
 package de.hamburg.sol.vs.server.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
-public class Component {
+@Data
+public class ComponentInfo {
 
 
-    private int comUUID;
+
+    private String comUUID;
     private String ipAddress;
     private int tcpPort;
     private LocalDateTime integrationPort;
     private LocalDateTime lastInteraction;
+    private String status;
 
-    public Component(int comUUID, String ipAddress, int tcpPort){
+    public ComponentInfo(String comUUID, String ipAddress, int tcpPort){
         this.comUUID = comUUID;
         this.ipAddress = ipAddress;
         this.tcpPort = tcpPort;
@@ -19,16 +26,4 @@ public class Component {
         this.lastInteraction = LocalDateTime.now();
     }
 
-
-    public int getComUUID() {
-        return comUUID;
-    }
-
-    public String getIpAddress() {
-        return ipAddress;
-    }
-
-    public int getTcpPort() {
-        return tcpPort;
-    }
 }

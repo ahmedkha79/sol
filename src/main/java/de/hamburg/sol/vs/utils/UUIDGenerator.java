@@ -9,8 +9,8 @@ public class UUIDGenerator {
     private static Random RANDOM = new Random();
 
 
-    public static int generateCOM_UUID() {
-        return RANDOM.nextInt(9000) + 1000;
+    public static String generateCOM_UUID() {
+        return String.valueOf(RANDOM.nextInt(9000) + 1000);
     }
 
 
