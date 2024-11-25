@@ -2,7 +2,7 @@ package de.hamburg.sol.server.instance;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hamburg.sol.vs.server.instance.SolServer;
-import de.hamburg.sol.vs.protocol.solResponse.SolProtocol;
+import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.utils.ProtocolHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
