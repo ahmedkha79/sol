@@ -3,7 +3,7 @@ package de.hamburg.sol.vs.client.broadcast;
 
 
 import de.hamburg.sol.vs.client.model.SolComponent;
-import de.hamburg.sol.vs.protocol.solResponse.SolProtocol;
+import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
