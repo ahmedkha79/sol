@@ -1,14 +1,11 @@
 package de.hamburg.sol.vs.server.instance;
 
-import de.hamburg.sol.vs.protocol.solResponse.SolProtocol;
+import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
 import de.hamburg.sol.vs.utils.UUIDGenerator;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -19,7 +16,6 @@ import java.net.SocketException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
