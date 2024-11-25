@@ -1,4 +1,4 @@
-package de.hamburg.sol.vs.protocol.solResponse;
+package de.hamburg.sol.vs.protocol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -54,19 +54,19 @@ public class SolProtocol {
 
 
 
-//    @Override
-//    public String toString(){
-//        StringBuilder sb = new StringBuilder();
-//        sb.append(String.format(   "\"star\":%s \n" +
-//                                "\"sol\":%s \n" +
-//                                "\"ip\":%s \n" +
-//                                "\"port\":%d \n" +
-//                                "\"component\":%s \n"
-//                                ,star, sol, ipAddress, port, comUUID));
-//
-//        if (status != null) {
-//            sb.append(String.format("\"status\": %s \n", status));
-//        }
-//        return sb.toString();
-//    }
+    @Override
+    public String toString(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format(   "\"star\":%s \n" +
+                                "\"sol\":%s \n" +
+                                "\"ip\":%s \n" +
+                                "\"port\":%d \n" +
+                                "\"component\":%s \n"
+                                ,star, sol, ipAddress, port, comUUID));
+
+        if (status != null) {
+            sb.append(String.format("\"status\": %s \n", status));
+        }
+        return sb.toString();
+    }
 }
