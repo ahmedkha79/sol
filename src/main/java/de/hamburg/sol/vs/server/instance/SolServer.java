@@ -5,13 +5,16 @@ import de.hamburg.sol.vs.server.model.ComponentInfo;
 import de.hamburg.sol.vs.utils.UUIDGenerator;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Async;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+
 import static de.hamburg.sol.vs.config.GlobalConfig.*;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.*;
+
 import java.net.SocketException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -24,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 
 //Singleton
+@Log4j2
 public class SolServer implements Runnable {
     //private static SolServer instance;
     @Getter
@@ -37,13 +41,12 @@ public class SolServer implements Runnable {
     private final String starUUID;
     @Setter
     private DatagramSocket udpSocket;
+    private int starPort;
     //Thread-safe
     private ConcurrentHashMap<String, ComponentInfo> components = new ConcurrentHashMap<>();
     //Registrierungsmap
     private ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
     private volatile boolean running;
-    private static final CountDownLatch latch = new CountDownLatch(1);
-
 
 
     public SolServer(int maxComponents) throws IllegalAccessException, SocketException {
@@ -51,6 +54,7 @@ public class SolServer implements Runnable {
         this.initializationTime = LocalDateTime.now();
         this.activeComponents = 1;
         this.maxComponents = maxComponents;
+        this.starPort = getStarPort();
         this.solComponentInfo = new ComponentInfo(comUUID, getLocalHostAddress(), getStarPort());
         this.solComponentInfo.setStatus("200");
         this.starUUID = generateStar_UUID();
@@ -60,69 +64,54 @@ public class SolServer implements Runnable {
     }
 
 
-//    public static SolServer getInstance(int maxComponents) throws IllegalAccessException, SocketException {
-//        if (instance == null) {
-//            instance = new SolServer(maxComponents);
-//        }
-//        return instance;
-//    }
-//
-//    public static SolServer get(){
-//        return instance;
-//    }
-
-    public static boolean isServerReady(){
-        return latch.getCount() == 0;
-    }
-
-
-
-
     @Override
     public void run() {
         this.running = true;
-        System.err.println("Solserver gestartet");
-        latch.countDown();
-        while(running) {
+        log.info("Solserver wird gestartet");
+
+
+        log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
+
+        while (running) {
             listenForBroadcastsRequests();
         }
     }
 
-    public void stopServer(){
+    public void stopServer() {
         this.running = false;
         Thread.currentThread().interrupt();
-        if(udpSocket != null){
+        if (udpSocket != null) {
             udpSocket.close();
         }
     }
 
-    public void listenForBroadcastsRequests(){
+    public void listenForBroadcastsRequests() {
         try {
+            byte[] buffer = new byte[1024];
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+            udpSocket.receive(packet);
 
-                System.out.println("SOL lauscht auf Broadcasts am Port " + getStarPort());
-                byte[] buffer = new byte[1024];
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                udpSocket.receive(packet);
-                String request = new String(packet.getData(), 0, packet.getLength());
-                System.out.println("Empfangene Nachricht: " + request);
-                if (request.equals("HELLO?")) {
-                    respondToHello(packet.getAddress(), packet.getPort());
-                } else {
-                    System.out.println("Unknown request: " + request);
-                }
+            String request = new String(packet.getData(), 0, packet.getLength());
+
+            log.info("Empfangene Nachricht: {}", request);
+            if (request.equals("HELLO?")) {
+                respondToHello(packet.getAddress(), packet.getPort());
+            } else {
+                log.warn("Unknown request: {}", request);
+            }
+
 
 
 
         } catch (Exception e) {
-           e.printStackTrace();
+            e.printStackTrace();
         }
     }
 
 
-
     @Async
-    protected void respondToHello(InetAddress address, int port){
-        try{
+    protected void respondToHello(InetAddress address, int port) {
+        try {
             String com_comUUID = generateCOM_UUID();
             SolProtocol response = new SolProtocol(starUUID, comUUID, solComponentInfo.getIpAddress(), solComponentInfo.getTcpPort(), com_comUUID);
             String responseJson = writeValueAsString(response);
@@ -136,71 +125,71 @@ public class SolServer implements Runnable {
         }
     }
 
-    public int getComponentCount(){
+    public int getComponentCount() {
         return components.size();
     }
 
-    public boolean freeSpace(){
+    public boolean freeSpace() {
         return getComponentCount() < maxComponents;
     }
 
-    public boolean queueContainsComUUID(String comUUID){
+    public boolean queueContainsComUUID(String comUUID) {
         return comUUIDQueue.contains(comUUID);
     }
 
-    public void addComponent(ComponentInfo componentInfo){
-        if(!components.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID())){
+    public void addComponent(ComponentInfo componentInfo) {
+        if (!components.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID())) {
             components.put(componentInfo.getComUUID(), componentInfo);
             removeRegisterComUUID(componentInfo.getComUUID());
         } else {
+            log.error("comUUID {} already exists or never send by Sol", componentInfo.getComUUID());
             throw new IllegalArgumentException(String.format("Component %s already exists or %s never send by Sol", componentInfo.getComUUID(), componentInfo.getComUUID()));
+
         }
     }
 
-    public ComponentInfo getComponentInfo(String comUUID){
+    public ComponentInfo getComponentInfo(String comUUID) {
         return components.get(comUUID);
     }
 
-    public boolean checkIfComponentExists(String comUUID){
+    public boolean checkIfComponentExists(String comUUID) {
         return components.containsKey(comUUID);
     }
 
 
-    public void removeRegisterComUUID(String comUUID){
-        if(queueContainsComUUID(comUUID)) {
+    public void removeRegisterComUUID(String comUUID) {
+        if (queueContainsComUUID(comUUID)) {
             comUUIDQueue.remove(comUUID);
         } else {
+            log.error("comUUID {} does not exist", comUUID);
             throw new NoSuchElementException(String.format("%s nicht in den Anfragen Register", comUUID));
         }
     }
 
 
-
-
-
-    private String generateStar_UUID(){
+    private String generateStar_UUID() {
         try {
             String input = solComponentInfo.getIpAddress() + getGroupId() + comUUID;
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] hashBytes = md.digest(input.getBytes());
             StringBuilder builder = new StringBuilder();
-            for(byte b : hashBytes){
+            for (byte b : hashBytes) {
                 builder.append(String.format("%02x", b));
             }
             return builder.toString();
-        } catch(NoSuchAlgorithmException e){
+        } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
-    private String generateCOM_UUID(){
+
+    private String generateCOM_UUID() {
         String comUUID;
         do {
             comUUID = UUIDGenerator.generateCOM_UUID();
-        } while(components.containsKey(comUUID));
-       return comUUID;
+        } while (components.containsKey(comUUID));
+        return comUUID;
     }
-
 
 
 }

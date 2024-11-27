@@ -28,6 +28,8 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'org.apache.httpcomponents:httpcore:4.4.13'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat:3.4.0'
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3' // Version nach Bedarf anpassen
+
 
     implementation 'org.apache.logging.log4j:log4j-api:2.20.0'
     implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
