@@ -2,7 +2,8 @@ package de.hamburg.sol.vs.client.broadcast;
 
 
 
-import de.hamburg.sol.vs.client.model.SolComponent;
+import de.hamburg.sol.vs.client.model.instance.SolComponent;
+import de.hamburg.sol.vs.client.model.factory.SolComponentFactory;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import lombok.Setter;
@@ -36,6 +37,9 @@ public class BroadCastClient implements Runnable {
 
     @Autowired
     private ApplicationContext applicationContext;
+    @Autowired
+    private RestTemplate restTemplate;
+
     private final Integer STAR_PORT;
 
     @Setter
@@ -57,6 +61,7 @@ public class BroadCastClient implements Runnable {
         responses = new ConcurrentLinkedQueue<>();
         this.udpSocket = new DatagramSocket();
         this.udpSocket.setBroadcast(true);
+
 
 
     }
@@ -104,16 +109,17 @@ public class BroadCastClient implements Runnable {
                                     log.info("Erfolgreich im Star: {} registriert", solProtocol.getSol());
                                     log.info("Solkomponente starten... mit Port: {}", serverSocket.getLocalPort());
 
-                                    SolComponent component = SolComponent.builder().
-                                            starUUID(solProtocol.getStar())
-                                            .solUUID(solProtocol.getSol())
-                                            .solIpAddress(solProtocol.getIpAddress())
-                                            .solPort(solProtocol.getPort())
-                                            .comUUID(solProtocol.getComUUID())
-                                            .comIpAddress(ipAddress)
-                                            .comPort(serverSocket.getLocalPort()).build();
-                                    serverSocket.close();
 
+                                    SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
+                                    SolComponent solComponent = solComponentFactory.createSolComponent(solProtocol.getStar(),
+                                            solProtocol.getSol(), solProtocol.getIpAddress(), solProtocol.getPort(), solProtocol.getComUUID(),
+                                            ipAddress, serverSocket.getLocalPort());
+
+                                    log.info("Solkomponente mit folgenden Werten: {}", solComponent);
+
+
+
+                                    serverSocket.close();
 
                                     isBroadcasting = false;
 
@@ -153,6 +159,7 @@ public class BroadCastClient implements Runnable {
     }
 
 
+
     private void sendHelloRequest() throws IOException {
         byte[] message = "HELLO?".getBytes();
         InetSocketAddress broadCastAddress = new InetSocketAddress("255.255.255.255", STAR_PORT);
@@ -188,7 +195,7 @@ public class BroadCastClient implements Runnable {
         String url = String.format("http://%s:%d/vs/v1/system", solProtocol.getIpAddress(), solProtocol.getPort());
         try{
             int timeout = 5000;
-            RestTemplate restTemplate = createRestTemplateWithTimeout(timeout);
+
             log.info("Erstelle Registrierungsanfrage mit {} Sekunden Timeout", timeout/1000);
 
 
