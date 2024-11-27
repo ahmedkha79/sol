@@ -26,7 +26,7 @@ public class SolComponentService {
     private SolComponent solComponent;
 
 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public SolComponentService(RestTemplate restTemplate) {
