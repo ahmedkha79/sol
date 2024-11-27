@@ -30,6 +30,9 @@ public class SolApplication {
     @Autowired
     BroadCastClient broadCastClient;
 
+    @Autowired
+    BroadCastClient broadCastClient2;
+
     public static void main(String[] args) {
         System.setProperty("spring.devtools.restart.enabled", "false");
         SpringApplication application = new SpringApplication(SolApplication.class);
@@ -52,15 +55,15 @@ public class SolApplication {
     public void init(){
         try{
             createLogDirectory();
-//            BroadCastClient broadCastClient = applicationContext.getBean(BroadCastClient.class);
+//
             Thread broadCastThread = new Thread(broadCastClient);
             broadCastThread.setName("Peer 1");
             log.info("{} gestartet", broadCastThread.getName());
             broadCastThread.start();
 
-            Thread.sleep(90000);
+            Thread.sleep(80000);
 
-            BroadCastClient broadCastClient2 = applicationContext.getBean(BroadCastClient.class);
+
             Thread broadCastThread2 = new Thread(broadCastClient2);
             broadCastThread2.setName("Peer 2");
             broadCastThread2.start();
