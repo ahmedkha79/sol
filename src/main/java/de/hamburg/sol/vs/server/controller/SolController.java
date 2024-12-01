@@ -79,7 +79,7 @@ public class SolController {
                 return ResponseEntity.status(409).body(HttpStatus.CONFLICT.getReasonPhrase());
             }
 
-            componentInfo.setLastInteraction(LocalDateTime.now());
+            solServer.updateComponentLastSeen(comUUID);
             componentInfo.setStatus("200");
             log.info("comUUID: {} wurde erfolgreich gepatched", comUUID);
 
