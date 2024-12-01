@@ -6,7 +6,10 @@ import de.hamburg.sol.vs.utils.UUIDGenerator;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -20,20 +23,18 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 
 import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 
 //Singleton
 @Log4j2
+@Lazy
 public class SolServer implements Runnable {
     //private static SolServer instance;
     @Getter
     private final String comUUID;
     private LocalDateTime initializationTime;
-    private int activeComponents;
     private int maxComponents;
     @Getter
     private ComponentInfo solComponentInfo;
@@ -46,20 +47,23 @@ public class SolServer implements Runnable {
     private ConcurrentHashMap<String, ComponentInfo> components = new ConcurrentHashMap<>();
     //Registrierungsmap
     private ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
+
+    private final ScheduledExecutorService scheduler;
+
     private volatile boolean running;
 
 
-    public SolServer(int maxComponents) throws IllegalAccessException, SocketException {
+    public SolServer(ScheduledExecutorService scheduler, int maxComponents) throws IllegalAccessException, SocketException {
+        this.scheduler = scheduler;
         this.comUUID = generateCOM_UUID();
         this.initializationTime = LocalDateTime.now();
-        this.activeComponents = 1;
         this.maxComponents = maxComponents;
         this.starPort = getStarPort();
         this.solComponentInfo = new ComponentInfo(comUUID, getLocalHostAddress(), getStarPort());
         this.solComponentInfo.setStatus("200");
         this.starUUID = generateStar_UUID();
         this.udpSocket = new DatagramSocket(getStarPort());
-        components.put(comUUID, solComponentInfo);
+        putComponent(solComponentInfo);
         this.running = false;
     }
 
@@ -136,14 +140,40 @@ public class SolServer implements Runnable {
     }
 
     public void addComponent(ComponentInfo componentInfo) {
-        if (!components.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID())) {
-            components.put(componentInfo.getComUUID(), componentInfo);
+        if ((!components.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID()))) {
+            putComponent(componentInfo);
             removeRegisterComUUID(componentInfo.getComUUID());
         } else {
             log.error("comUUID {} already exists or never send by Sol", componentInfo.getComUUID());
             throw new IllegalArgumentException(String.format("Component %s already exists or %s never send by Sol", componentInfo.getComUUID(), componentInfo.getComUUID()));
 
         }
+    }
+
+    private void putComponent(ComponentInfo componentInfo) {
+        componentInfo.startTimeout(60, TimeUnit.SECONDS, () -> handleTimeout(componentInfo));
+        components.put(componentInfo.getComUUID(), componentInfo);
+    }
+
+    public void updateComponentLastSeen(String comUUID) {
+        ComponentInfo componentInfo = components.get(comUUID);
+        if (componentInfo != null) {
+            componentInfo.updateLastInteraction();
+            //componentInfo.resetTimeout(60, TimeUnit.SECONDS);
+            log.info("Komponente {} hat sich zurückgemeldet, Timer zurückgesetzt", comUUID);
+        } else {
+            log.warn("Lebenszeichen von unbekannter Komponente {}", comUUID);
+        }
+    }
+
+    private void handleTimeout(ComponentInfo componentInfo){
+        log.warn("Komponente {} reagiert nicht mehr. Sende Ping...", componentInfo.getComUUID());
+        sendPingRequest(componentInfo);
+
+    }
+
+    private void sendPingRequest(ComponentInfo componentInfo){
+
     }
 
     public ComponentInfo getComponentInfo(String comUUID) {
