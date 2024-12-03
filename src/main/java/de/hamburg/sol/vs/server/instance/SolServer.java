@@ -1,5 +1,7 @@
 package de.hamburg.sol.vs.server.instance;
 
+import de.hamburg.sol.vs.client.model.factory.SolComponentFactory;
+import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
 import de.hamburg.sol.vs.utils.UUIDGenerator;
@@ -7,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,9 @@ import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 @Lazy
 public class SolServer implements Runnable {
     //private static SolServer instance;
+
+    @Autowired
+    private ApplicationContext applicationContext;
     @Getter
     private final String comUUID;
     private LocalDateTime initializationTime;
@@ -39,9 +45,13 @@ public class SolServer implements Runnable {
     @Getter
     private ComponentInfo solComponentInfo;
     @Getter
+    private SolComponent solComponent;
+    @Getter
     private final String starUUID;
     @Setter
     private DatagramSocket udpSocket;
+
+    private String starIpAddress;
     private int starPort;
     //Thread-safe
     private ConcurrentHashMap<String, ComponentInfo> components = new ConcurrentHashMap<>();
@@ -58,6 +68,7 @@ public class SolServer implements Runnable {
         this.comUUID = generateCOM_UUID();
         this.initializationTime = LocalDateTime.now();
         this.maxComponents = maxComponents;
+        this.starIpAddress = getLocalHostAddress();
         this.starPort = getStarPort();
         this.solComponentInfo = new ComponentInfo(comUUID, getLocalHostAddress(), getStarPort());
         this.solComponentInfo.setStatus("200");
@@ -65,11 +76,14 @@ public class SolServer implements Runnable {
         this.udpSocket = new DatagramSocket(getStarPort());
         putComponent(solComponentInfo);
         this.running = false;
+        initializeSolComponent();
     }
 
 
     @Override
     public void run() {
+
+
         this.running = true;
         log.info("Solserver wird gestartet");
 
@@ -87,6 +101,13 @@ public class SolServer implements Runnable {
         if (udpSocket != null) {
             udpSocket.close();
         }
+    }
+
+    private void initializeSolComponent(){
+        SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
+        this.solComponent = solComponentFactory.createSolComponent(starUUID, comUUID, starIpAddress, starPort, comUUID, starIpAddress,
+                starPort, false);
+
     }
 
     public void listenForBroadcastsRequests() {
@@ -172,7 +193,8 @@ public class SolServer implements Runnable {
 
     }
 
-    private void sendPingRequest(ComponentInfo componentInfo){
+    @Async
+    protected void sendPingRequest(ComponentInfo componentInfo){
 
     }
 
@@ -217,6 +239,16 @@ public class SolServer implements Runnable {
             comUUID = UUIDGenerator.generateCOM_UUID();
         } while (components.containsKey(comUUID));
         return comUUID;
+    }
+
+    public SolProtocol getSolInfo(){
+        return SolProtocol.builder()
+                .star(starUUID)
+                .sol(comUUID)
+                .comUUID(comUUID)
+                .ipAddress(starIpAddress)
+                .port(starPort)
+                .build();
     }
 
 
