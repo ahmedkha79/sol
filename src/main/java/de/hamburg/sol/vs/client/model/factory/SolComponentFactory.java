@@ -1,6 +1,7 @@
 package de.hamburg.sol.vs.client.model.factory;
 
 
+import de.hamburg.sol.vs.central.controller.SolComponentController;
 import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.client.service.SolComponentService;
 import org.springframework.context.ApplicationContext;
@@ -17,7 +18,7 @@ public class SolComponentFactory {
     }
 
     public SolComponent createSolComponent(String starUUID, String solUUID, String solIpAddress, int solPort,
-                                           String comUUID, String comIpAddress, int comPort) {
+                                           String comUUID, String comIpAddress, int comPort, boolean component) {
         SolComponent solComponent = SolComponent.builder()
                 .starUUID(starUUID)
                 .solUUID(solUUID)
@@ -27,8 +28,12 @@ public class SolComponentFactory {
                 .comIpAddress(comIpAddress)
                 .comPort(comPort)
                 .build();
-        SolComponentService service = applicationContext.getBean(SolComponentService.class);
-        service.initialize(solComponent);
+        if(component) {
+            SolComponentService service = applicationContext.getBean(SolComponentService.class);
+            service.initialize(solComponent);
+        }
+        SolComponentController controller = applicationContext.getBean(SolComponentController.class);
+        controller.initialize(solComponent);
         return solComponent;
     }
 }
