@@ -1,6 +1,7 @@
 package de.hamburg.sol.vs.server.controller;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
@@ -84,15 +85,6 @@ public class SolController {
             log.info("comUUID: {} wurde erfolgreich gepatched", comUUID);
 
             return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
-    }
-
-
-    //GET nur für Sol
-    @GetMapping("/{comUUID:\\d+}")
-    public ResponseEntity<String> connectToComponent(@PathVariable String comUUID, @RequestParam("star") String starUUID) throws Exception {
-        //if(solServer.getSolComponentInfo())
-            //UNICAST Über die IP und Port
-        return null;
     }
 
 
