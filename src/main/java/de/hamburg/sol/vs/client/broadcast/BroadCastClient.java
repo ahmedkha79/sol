@@ -113,7 +113,7 @@ public class BroadCastClient implements Runnable {
                                     SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
                                     SolComponent solComponent = solComponentFactory.createSolComponent(solProtocol.getStar(),
                                             solProtocol.getSol(), solProtocol.getIpAddress(), solProtocol.getPort(), solProtocol.getComUUID(),
-                                            ipAddress, serverSocket.getLocalPort());
+                                            ipAddress, serverSocket.getLocalPort(), true);
 
                                     log.info("Solkomponente mit folgenden Werten: {}", solComponent);
 
