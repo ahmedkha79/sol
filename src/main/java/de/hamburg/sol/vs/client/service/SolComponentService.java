@@ -46,7 +46,7 @@ public class SolComponentService {
         //RestTemplate restTemplateWithTimeout = createRestTemplateWithTimeout(5000);
         while(retries < 2 && !patchSuccessful){
             try{
-                log.info("Solkomponente: {} sende Patch Beat Check", solComponent.getComPort());
+                log.info("Solkomponente: {} sende Patch Beat Check", solComponent.getComUUID());
 
                 SolProtocol solProtocol = createSolProtocol();
                 HttpHeaders headers = new HttpHeaders();
