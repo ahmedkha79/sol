@@ -1,5 +1,6 @@
 package de.hamburg.sol.vs.client.model.instance;
 
+import de.hamburg.sol.vs.protocol.SolProtocol;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,22 +20,19 @@ public class SolComponent {
     private String comUUID;
     private String comIpAddress;
     private int comPort;
-    //private ServerSocket tcpServerSocket;
-    //private final String restApiUrl = String.format("http://%s:%d/vs/v1/system", solIpAddress, solPort);
-
-
-
-//    public void startComponent(){
-//        try {
-//            //tcpServerSocket = new ServerSocket(comPort);
-//        } catch(IOException e){
-//            e.printStackTrace();
-//            System.out.println("TCP Socket konnte nicht erzeugt werden");
-//        }
 
 
 
 
+    public SolProtocol getComponentInfo(){
+        return SolProtocol.builder()
+                .star(starUUID)
+                .sol(solUUID)
+                .comUUID(comUUID)
+                .ipAddress(comIpAddress)
+                .port(comPort)
+                .build();
+    }
 
 }
 
