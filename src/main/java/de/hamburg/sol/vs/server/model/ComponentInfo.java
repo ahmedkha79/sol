@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Data
@@ -21,6 +22,7 @@ public class ComponentInfo {
     private LocalDateTime integrationPort;
     private LocalDateTime lastInteraction;
     private final ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> scheduledFuture;
     private String status;
     private Runnable onTimeout;
 
@@ -37,7 +39,7 @@ public class ComponentInfo {
         this.lastInteraction = LocalDateTime.now();
     }
 
-    public void startTimeout(long timeout, TimeUnit unit, Runnable onTimeout){
+    public synchronized void startTimeout(long timeout, TimeUnit unit, Runnable onTimeout){
         this.onTimeout = onTimeout;
         resetTimeout(timeout, unit);
 
@@ -45,7 +47,11 @@ public class ComponentInfo {
 
     public void resetTimeout(long timeout, TimeUnit unit){
 
-        scheduler.schedule(() -> {
+        if(scheduledFuture != null && !scheduledFuture.isDone()){
+            scheduledFuture.cancel(false);
+        }
+
+        scheduledFuture = scheduler.schedule(() -> {
             if(onTimeout != null){
                 onTimeout.run();
             }
