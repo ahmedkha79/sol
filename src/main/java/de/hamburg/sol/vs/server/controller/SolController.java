@@ -6,6 +6,7 @@ import de.hamburg.sol.vs.server.instance.SolServer;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
+import org.apache.coyote.Response;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -14,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static de.hamburg.sol.vs.utils.InetAddressHandler.isIpReachable;
 @Log4j2
@@ -92,7 +94,32 @@ public class SolController {
     public ResponseEntity<String> connectToComponent(@PathVariable String comUUID, @RequestParam("star") String starUUID) throws Exception {
         //if(solServer.getSolComponentInfo())
             //UNICAST Über die IP und Port
-        return null;
+        try {
+            if (!solServer.getStarUUID().equals(starUUID)) {
+                log.warn("Falscher Stern: Erwartet {}, erhalten {}", solServer.getStarUUID(), starUUID);
+                return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+            }
+            // Überprüfen, ob die Angaben zur Komponente existiert
+            ComponentInfo component = solServer.getComponentInfo(comUUID);
+            if (component == null) {
+                log.warn("Komponente mit UUID {} nicht gefunden.", comUUID);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("404 Not Found: Komponente exisitiert nicht.");
+            }
+
+            // Überprüfen, ob die Angaben zur Komponente korrekt sind
+            if (!component.getComUUID().equals(comUUID)) {
+                log.warn("Konflikt: Komponentendaten stimmen nicht überein. Erwartet {}, erhalten {}",
+                        component.getComUUID(), comUUID);
+                return ResponseEntity.status(409).body(HttpStatus.CONFLICT.getReasonPhrase());
+            }
+
+            // Erfolgreiche Prüfung
+            log.info("Komponente {} aktiv. Status {}", comUUID, component.getStatus());
+            return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
+        } catch (Exception e) {
+            log.error("Fehler beim Abrufen des Status für Komponente {}: {}", comUUID, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("500 Internal Server Error");
+        }
     }
 
 
@@ -122,6 +149,39 @@ public class SolController {
         return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
 
 
+    }
+
+    /**
+     * Abmelden von SOL
+     * @param comUUID
+     * @return
+     * @throws Exception
+     */
+    @DeleteMapping("/{comUUID:\\d+}")
+    public ResponseEntity<String> handleExitCommand(@PathVariable String comUUID, @RequestParam("star") String starUUID) {
+
+        // Prüfen, ob die Anfrage von dem richtigen Stern kommt
+        if (!solServer.getStarUUID().equals(starUUID)){
+           log.warn("Falscher Stern: Erwartet {}, erhalten {}", solServer.getStarUUID(), starUUID);
+           return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+        }
+        ComponentInfo component = solServer.getComponentInfo(comUUID);
+
+        if (component == null) {
+            log.warn("Komponente {} ist nicht registriert.", comUUID);
+            return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
+        }
+
+        // Komponente akzeptiert den Exit-Befehl und beendet sich
+        log.info("Komponente {} hat den Exit-Befehl erhalten.", comUUID);
+        component.setStatus("disconnected");
+
+        if (starUUID.equals(solServer.getStarUUID())) {
+            log.info("SOL wurde aufgefordert, sich selbst zu beenden.");
+            solServer.stopServer();
+        }
+
+        return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
     }
 
 

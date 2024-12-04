@@ -158,7 +158,10 @@ public class BroadCastClient implements Runnable {
 
     }
 
-
+    /**
+     * Sendet "Hello"-Nachricht
+     * @throws IOException
+     */
 
     private void sendHelloRequest() throws IOException {
         byte[] message = "HELLO?".getBytes();
@@ -169,6 +172,9 @@ public class BroadCastClient implements Runnable {
 
     }
 
+    /**
+     * Antworten von SOL empfangen
+     */
     private void receiveResponses() {
             while(isBroadcasting){
                 try{
@@ -190,7 +196,11 @@ public class BroadCastClient implements Runnable {
         }
 
 
-
+    /**
+     * Registrieren bei einem Stern
+     * @param solProtocol
+     * @return
+     */
     private boolean registerWithSol(SolProtocol solProtocol){
         String url = String.format("http://%s:%d/vs/v1/system", solProtocol.getIpAddress(), solProtocol.getPort());
         try{

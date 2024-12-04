@@ -6,7 +6,11 @@ import de.hamburg.sol.vs.utils.UUIDGenerator;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -19,6 +23,7 @@ import java.net.SocketException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -48,6 +53,8 @@ public class SolServer implements Runnable {
     private ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
     private volatile boolean running;
 
+    @Autowired
+    private RestTemplate restTemplate;
 
     public SolServer(int maxComponents) throws IllegalAccessException, SocketException {
         this.comUUID = generateCOM_UUID();
@@ -191,5 +198,109 @@ public class SolServer implements Runnable {
         return comUUID;
     }
 
+    /**
+     * SOL prüft aktiv den Status der Komponente
+     */
+    public void verifyComponentStatus(String comUUID) {
+        ComponentInfo component = components.get(comUUID);
 
+        if (component == null) {
+            log.warn("Komponente mit UUID {} exisitert nicht.", comUUID);
+            return;
+        }
+
+        String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+                component.getIpAddress(),
+                component.getTcpPort(),
+                comUUID,
+                starUUID);
+
+        try {
+            log.info("Überprüfe Status der Komponente {} über UNICAST: {}", comUUID, url);
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("Komponente {} ist aktiv.", comUUID);
+                component.setLastInteraction(LocalDateTime.now());
+                component.setStatus("200");
+            } else {
+                log.warn("Komponente {} hat einen unerwarteten Status: {}", comUUID, response.getStatusCode());
+                markComponentAsDisconnected(comUUID);
+            }
+        } catch (Exception e) {
+            log.error("Fehler beim Überprüfend er Komponente {}: {}", comUUID, e.getMessage());
+            markComponentAsDisconnected(comUUID);
+        }
+    }
+
+    private void markComponentAsDisconnected(String comUUID) {
+        ComponentInfo component = components.get(comUUID);
+        if (component != null) {
+            component.setStatus("disconnected");
+            log.warn("Komponente {} wurde als 'disconnected' markiert.", comUUID);
+        }
+    }
+
+    /**
+     * Regelmäßige Überprüfung der Komponente, die keinen Heartbeat senden
+     */
+    @Scheduled(fixedRate = 60000)
+    public void checkAndVerifyActiveComponents(){
+        components.values().forEach(component -> {
+            if (component.getLastInteraction().isBefore(LocalDateTime.now().minusSeconds(60))) {
+                log.warn("Kein Hearbeat von Komponente seit 60 Sekunden. Starte UNICAST-Überprüfung.", component.getComUUID());
+                verifyComponentStatus(component.getComUUID());
+            }
+        });
+    }
+
+    /**
+     * Abmelden von SOL
+     */
+    public void exitAndShutdown() {
+        log.info("EXIT-BEFEHL erhalten. Beginne mit dem Entfernen aller aktiven Komponenten...");
+
+        components.values().forEach(component -> {
+            if (!component.getComUUID().equals(this.comUUID)) {
+                boolean success = tryToRemoveComponent(component);
+                if (!success) {
+                    log.warn("Komponente {} konnte nicht erreicht werden. Markeire als 'disconnected'.", component.getComUUID());
+                    component.setStatus("disconnected");
+                }
+            }
+        });
+
+        log.info("Alle Komponenten wurden kontaktiert. Beende SOL.");
+        stopServer();
+    }
+
+    private boolean tryToRemoveComponent(ComponentInfo component) {
+        String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+                component.getIpAddress(),
+                component.getTcpPort(),
+                component.getComUUID(),
+                this.starUUID);
+
+        for (int i = 0; i < 3; i++) {
+            try {
+                log.info("Sende DELETE-Befehl an Komponente {}. Versuch {}.", component.getComUUID(), i + 1);
+                restTemplate.delete(url);
+                log.info("Komponente {} hat den DELETE-Befehl akzeptiert.", component.getComUUID());
+                return true;
+            } catch (Exception e) {
+                log.error("Fehler beim Kontaktieren der Komponente {}: {}", component.getComUUID(), e.getMessage());
+                waitBeforRetry((i+1)*10000); // 10 Sekunden beim ersten Fehler, 20 Sekunden beim zweiten
+            }
+        }
+        return false;
+    }
+
+    private void waitBeforRetry(int miliSeconds){
+        try {
+            Thread.sleep(miliSeconds);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Warten wurde unterbrochen.");
+        }
+    }
 }

@@ -82,6 +82,7 @@ public class SolComponentService {
         if(!patchSuccessful){
             log.error("Verbindung zu Sol konnte nach {} Versuchen nicht hergestellt werden", retries);
             //TODO terminateComponent
+            terminateComponent();
         }
     }
 
@@ -105,6 +106,11 @@ public class SolComponentService {
                 .build();
 
         return protocol;
+    }
+
+    private void terminateComponent(){
+        log.error("Komponente {} wird beendet.", solComponent.getComUUID());
+        System.exit(1);
     }
 
 }
