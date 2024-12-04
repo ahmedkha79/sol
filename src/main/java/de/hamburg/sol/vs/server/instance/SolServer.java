@@ -5,6 +5,7 @@ import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
 import de.hamburg.sol.vs.utils.UUIDGenerator;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -76,7 +77,6 @@ public class SolServer implements Runnable {
         this.udpSocket = new DatagramSocket(getStarPort());
         putComponent(solComponentInfo);
         this.running = false;
-        initializeSolComponent();
     }
 
 
@@ -102,6 +102,12 @@ public class SolServer implements Runnable {
             udpSocket.close();
         }
     }
+
+    @PostConstruct
+    private void postConstruct(){
+        initializeSolComponent();
+    }
+
 
     private void initializeSolComponent(){
         SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
@@ -180,7 +186,7 @@ public class SolServer implements Runnable {
         ComponentInfo componentInfo = components.get(comUUID);
         if (componentInfo != null) {
             componentInfo.updateLastInteraction();
-            //componentInfo.resetTimeout(60, TimeUnit.SECONDS);
+            componentInfo.resetTimeout(60, TimeUnit.SECONDS);
             log.info("Komponente {} hat sich zurückgemeldet, Timer zurückgesetzt", comUUID);
         } else {
             log.warn("Lebenszeichen von unbekannter Komponente {}", comUUID);
