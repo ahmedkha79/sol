@@ -3,6 +3,7 @@ package de.hamburg.sol.vs.server.model;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Data
+@Log4j2
 public class ComponentInfo {
 
 
@@ -39,23 +41,30 @@ public class ComponentInfo {
         this.lastInteraction = LocalDateTime.now();
     }
 
-    public synchronized void startTimeout(long timeout, TimeUnit unit, Runnable onTimeout){
+    public  void startTimeout(long timeout, TimeUnit unit, Runnable onTimeout){
         this.onTimeout = onTimeout;
         resetTimeout(timeout, unit);
 
     }
 
-    public void resetTimeout(long timeout, TimeUnit unit){
+    public synchronized void resetTimeout(long timeout, TimeUnit unit) {
+        log.info("Timer wird versucht zurückzusetzen");
+        try {
+            if (scheduledFuture != null && !scheduledFuture.isDone()) {
+                log.info("Before cancel: isCancelled={}, isDone={}", scheduledFuture.isCancelled(), scheduledFuture.isDone());
+                scheduledFuture.cancel(false);
+                log.info("After cancel: isCancelled={}, isDone={}", scheduledFuture.isCancelled(), scheduledFuture.isDone());
 
-        if(scheduledFuture != null && !scheduledFuture.isDone()){
-            scheduledFuture.cancel(false);
-        }
-
-        scheduledFuture = scheduler.schedule(() -> {
-            if(onTimeout != null){
-                onTimeout.run();
             }
-        }, timeout, unit);
+
+            scheduledFuture = scheduler.schedule(() -> {
+                if (onTimeout != null) {
+                    onTimeout.run();
+                }
+            }, timeout, unit);
+        } catch (Exception e) {
+            log.error("Failed to reset timeout", e);
+        }
     }
 
     public void stopTimeout(){

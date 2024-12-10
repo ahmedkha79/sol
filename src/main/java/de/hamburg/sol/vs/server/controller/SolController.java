@@ -88,33 +88,33 @@ public class SolController {
     }
 
 
-    @DeleteMapping("/{comUUID:\\d+}")
-    public ResponseEntity<String> disconnectFromComponent(@PathVariable String comUUID,
-                                                          @RequestParam("star") String starUUID,
-                                                          @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor, HttpServletRequest request) throws Exception {
-        ComponentInfo componentInfo = solServer.getComponentInfo(comUUID);
-
-        if(componentInfo == null) return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
-
-        if(!solServer.getStarUUID().equals(starUUID)){
-            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
-        }
-        String requestIp = (forwardedFor != null) ? forwardedFor : request.getRemoteAddr();
-        if(!componentInfo.getIpAddress().equals(requestIp)){
-            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
-        }
-
-        if(!componentInfo.getStatus().equals("200")){
-            return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
-        }
-
-        componentInfo.setStatus("left");
-        componentInfo.setLastInteraction(LocalDateTime.now());
-
-        return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
-
-
-    }
+//    @DeleteMapping("/{comUUID:\\d+}")
+//    public ResponseEntity<String> disconnectFromComponent(@PathVariable String comUUID,
+//                                                          @RequestParam("star") String starUUID,
+//                                                          @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor, HttpServletRequest request) throws Exception {
+//        ComponentInfo componentInfo = solServer.getComponentInfo(comUUID);
+//
+//        if(componentInfo == null) return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
+//
+//        if(!solServer.getStarUUID().equals(starUUID)){
+//            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+//        }
+//        String requestIp = (forwardedFor != null) ? forwardedFor : request.getRemoteAddr();
+//        if(!componentInfo.getIpAddress().equals(requestIp)){
+//            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+//        }
+//
+//        if(!componentInfo.getStatus().equals("200")){
+//            return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
+//        }
+//
+//        componentInfo.setStatus("left");
+//        componentInfo.setLastInteraction(LocalDateTime.now());
+//
+//        return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
+//
+//
+//    }
 
 
 

@@ -1,15 +1,14 @@
 package de.hamburg.sol.vs.client.model.instance;
 
 import de.hamburg.sol.vs.protocol.SolProtocol;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.extern.log4j.Log4j2;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Log4j2
 public class SolComponent {
 
     private String starUUID;
@@ -21,6 +20,8 @@ public class SolComponent {
     private String comIpAddress;
     private int comPort;
 
+    @Setter
+    private boolean isComponent;
 
 
 
@@ -32,6 +33,11 @@ public class SolComponent {
                 .ipAddress(comIpAddress)
                 .port(comPort)
                 .build();
+    }
+
+    public void terminateComponent(){
+        log.info("Komponente: {} wird abgeschaltet", comUUID);
+        System.exit(0);
     }
 
 }

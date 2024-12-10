@@ -123,7 +123,6 @@ public class BroadCastClient implements Runnable {
 
                                     isBroadcasting = false;
 
-                                    //component.startComponent();
                                     break;
 
                                 }
@@ -227,12 +226,6 @@ public class BroadCastClient implements Runnable {
         return false;
     }
 
-    private RestTemplate createRestTemplateWithTimeout(int timeoutMillis){
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(timeoutMillis);
-        requestFactory.setReadTimeout(timeoutMillis);
-        return new RestTemplate(requestFactory);
-    }
 
 
 

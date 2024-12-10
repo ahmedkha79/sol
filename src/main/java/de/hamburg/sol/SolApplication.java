@@ -3,12 +3,14 @@ package de.hamburg.sol;
 import de.hamburg.sol.vs.client.broadcast.BroadCastClient;
 
 
+import de.hamburg.sol.vs.simulation.CommandListener;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.io.IOException;
@@ -22,11 +24,16 @@ import static de.hamburg.sol.vs.config.GlobalConfig.getStarPort;
 @Log4j2
 @SpringBootApplication
 @EnableScheduling
+//@EnableAsync(proxyTargetClass = true)
 public class SolApplication {
 
 
     @Autowired
     private ApplicationContext applicationContext;
+
+//    @Autowired
+//    private CommandListener commandListener;
+
     @Autowired
     BroadCastClient broadCastClient;
 
@@ -55,22 +62,36 @@ public class SolApplication {
     public void init(){
         try{
             createLogDirectory();
-//
-            Thread broadCastThread = new Thread(broadCastClient);
-            broadCastThread.setName("Peer 1");
-            log.info("{} gestartet", broadCastThread.getName());
-            broadCastThread.start();
+            startApp();
 
-            Thread.sleep(80000);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startApp(){
+        Thread broadCastThread = new Thread(broadCastClient);
+        broadCastThread.setName("BroadCastThread");
+        log.info("{} wird gestartet", broadCastThread.getName());
+        broadCastThread.start();
+    }
+
+    public void startTest(){
+        try {
+            startApp();
+
+            Thread.sleep(100000);
 
 
             Thread broadCastThread2 = new Thread(broadCastClient2);
             broadCastThread2.setName("Peer 2");
             broadCastThread2.start();
-        } catch (Exception e) {
+        } catch(Exception e){
             e.printStackTrace();
         }
     }
+
 
     private static void createLogDirectory(){
         String workingDirectory = System.getProperty("user.dir");

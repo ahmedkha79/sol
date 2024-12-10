@@ -54,7 +54,7 @@ public class SolComponentService {
                 headers.setAccept(List.of(MediaType.TEXT_PLAIN));
 
                 String patchUrl = String.format("http://%s:%d/vs/v1/system/%s",solComponent.getSolIpAddress(), solComponent.getSolPort(), solComponent.getComUUID());
-                //String patchUrl = solComponent.getRestApiUrl() + "/" + solComponent.getComUUID();
+
                 log.info("Sende an folgende URL {}", patchUrl);
 
                 HttpEntity<SolProtocol> patchEntity = new HttpEntity<>(solProtocol, headers);
@@ -81,7 +81,7 @@ public class SolComponentService {
 
         if(!patchSuccessful){
             log.error("Verbindung zu Sol konnte nach {} Versuchen nicht hergestellt werden", retries);
-            //TODO terminateComponent
+            solComponent.terminateComponent();
         }
     }
 
@@ -92,6 +92,50 @@ public class SolComponentService {
             log.error("Fehler beim Warten: {}", e.getMessage());
         }
     }
+
+    public void handleExitCommand(){
+        String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+                solComponent.getSolIpAddress(),
+                solComponent.getSolPort(),
+                solComponent.getComUUID(),
+                solComponent.getStarUUID()
+                );
+        int retries = 0;
+        int timeOut = 10000;
+        boolean disconnectSuccessful = false;
+
+        while(retries <= 1 && !disconnectSuccessful){
+            try {
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setAccept(List.of(MediaType.TEXT_PLAIN));
+                HttpEntity<String> entity = new HttpEntity<>(headers);
+                ResponseEntity<String> deleteRequest = restTemplate.exchange(url, HttpMethod.DELETE, entity, String.class);
+
+                if(deleteRequest.getStatusCode().is2xxSuccessful()){
+                    log.info("Erfolgreich von Sol abgemeldet");
+                    disconnectSuccessful = true;
+                } else {
+                    log.warn("Sol antwortete mit Status: {}", deleteRequest.getStatusCode());
+                    retries++;
+                    waitBeforeRetry(timeOut);
+                }
+
+
+            } catch (Exception e) {
+                log.error("Fehler beim Abmelden von Sol");
+            }
+        }
+
+        if(!disconnectSuccessful){
+            log.info("SOL konnte nicht erreicht werden, bereite Abschaltung vor...");
+        }
+
+        solComponent.terminateComponent();
+
+
+    }
+
 
     private SolProtocol createSolProtocol(){
 

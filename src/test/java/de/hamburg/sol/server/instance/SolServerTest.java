@@ -10,7 +10,9 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
 
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +28,10 @@ public class SolServerTest {
     @Autowired
     private ApplicationContext applicationContext;
     @Autowired
+
     private SolServer server;
+    @MockBean
+    @Lazy
     private DatagramSocket mockSocket;
     private String responseJSON;
     private byte[] data;

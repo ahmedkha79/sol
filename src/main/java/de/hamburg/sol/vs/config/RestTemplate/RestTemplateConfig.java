@@ -1,4 +1,4 @@
-package de.hamburg.sol.vs.client.RestTemplate;
+package de.hamburg.sol.vs.config.RestTemplate;
 
 
 import org.springframework.boot.web.client.RestTemplateBuilder;
