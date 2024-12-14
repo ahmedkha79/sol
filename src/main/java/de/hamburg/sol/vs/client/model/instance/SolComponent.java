@@ -3,12 +3,16 @@ package de.hamburg.sol.vs.client.model.instance;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Log4j2
+@Lazy
+@Component
 public class SolComponent {
 
     private String starUUID;
@@ -20,8 +24,6 @@ public class SolComponent {
     private String comIpAddress;
     private int comPort;
 
-    @Setter
-    private boolean isComponent;
 
 
 
