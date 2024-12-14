@@ -1,12 +1,11 @@
 package de.hamburg.sol.vs.client.model.factory;
 
 
-import de.hamburg.sol.vs.central.controller.SolComponentController;
 import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.client.service.SolComponentService;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.support.GenericWebApplicationContext;
 
 @Component
 public class SolComponentFactory {
@@ -19,7 +18,7 @@ public class SolComponentFactory {
     }
 
     public SolComponent createSolComponent(String starUUID, String solUUID, String solIpAddress, int solPort,
-                                           String comUUID, String comIpAddress, int comPort, boolean component) {
+                                           String comUUID, String comIpAddress, int comPort) {
         SolComponent solComponent = SolComponent.builder()
                 .starUUID(starUUID)
                 .solUUID(solUUID)
@@ -28,14 +27,13 @@ public class SolComponentFactory {
                 .comUUID(comUUID)
                 .comIpAddress(comIpAddress)
                 .comPort(comPort)
-                .isComponent(component)
                 .build();
-        if(component) {
-            SolComponentService service = applicationContext.getBean(SolComponentService.class);
-            service.initialize(solComponent);
-        }
-        SolComponentController controller = applicationContext.getBean(SolComponentController.class);
-        controller.initialize(solComponent);
+        ((GenericWebApplicationContext) applicationContext).registerBean("dynamicSolComponent", SolComponent.class, () -> solComponent, bd -> bd.setPrimary(true));
+        applicationContext.getBean(SolComponent.class);
+
+        applicationContext.getBean(SolComponentService.class);
+
         return solComponent;
     }
+
 }
