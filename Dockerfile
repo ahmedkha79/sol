@@ -4,6 +4,14 @@ FROM openjdk:21-jdk-slim
 
 # Setze das Arbeitsverzeichnis
 
+# Install curl
+RUN apt-get update && apt-get install -y curl && apt-get clean
+
+
+RUN apt-get update && apt-get install -y net-tools
+
+
+
 WORKDIR /app
 
 # Kopiere die Anwendung ins Image
