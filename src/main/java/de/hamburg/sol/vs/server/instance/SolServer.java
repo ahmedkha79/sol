@@ -1,16 +1,11 @@
 package de.hamburg.sol.vs.server.instance;
 
-import de.hamburg.sol.vs.client.model.factory.SolComponentFactory;
-import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
 import de.hamburg.sol.vs.utils.UUIDGenerator;
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +15,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-import static de.hamburg.sol.vs.config.GlobalConfig.*;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.*;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.*;
 
 import java.net.SocketException;
@@ -37,16 +32,12 @@ import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 @Lazy
 public class SolServer implements Runnable {
 
-    @Autowired
-    private ApplicationContext applicationContext;
     @Getter
     private final String comUUID;
     private LocalDateTime initializationTime;
     private int maxComponents;
     @Getter
     private ComponentInfo solComponentInfo;
-    @Getter
-    private SolComponent solComponent;
     @Getter
     private final String starUUID;
     @Setter
@@ -55,16 +46,16 @@ public class SolServer implements Runnable {
     private String starIpAddress;
     private int starPort;
     //Thread-safe
-    private ConcurrentHashMap<String, ComponentInfo> inactiveComponents = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, ComponentInfo> activeComponents = new ConcurrentHashMap<>();
-    //Registrierungsmap
-    private ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentHashMap<String, ComponentInfo> inactiveComponents = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ComponentInfo> activeComponents = new ConcurrentHashMap<>();
+    //Preregistration
+    private final ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
 
     private final ScheduledExecutorService scheduler;
 
     private volatile boolean running;
 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
 
     public SolServer(ScheduledExecutorService scheduler, int maxComponents, RestTemplate restTemplate) throws IllegalAccessException, SocketException {
@@ -78,7 +69,7 @@ public class SolServer implements Runnable {
         this.solComponentInfo.setStatus("200");
         this.starUUID = generateStar_UUID();
         this.udpSocket = new DatagramSocket(getStarPort());
-        //putComponent(solComponentInfo);
+        putComponent(solComponentInfo);
         this.running = false;
         this.restTemplate = restTemplate;
     }
@@ -91,7 +82,6 @@ public class SolServer implements Runnable {
         this.running = true;
         log.info("Solserver wird gestartet mit starUUID: {}", starUUID);
 
-        initializeSolComponent();
 
 
         log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
@@ -113,20 +103,6 @@ public class SolServer implements Runnable {
         log.info("Sol wird heruntergefahren");
         stopServer();
         System.exit(0);
-    }
-
-    @PostConstruct
-    private void postConstruct() {
-        //initializeSolComponent();
-        startComponentTimeOut(solComponentInfo);
-    }
-
-
-    private void initializeSolComponent() {
-        SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
-        this.solComponent = solComponentFactory.createSolComponent(starUUID, comUUID, starIpAddress, starPort, comUUID, starIpAddress,
-                starPort, false);
-
     }
 
     public void listenForBroadcastsRequests() {
@@ -371,6 +347,16 @@ public class SolServer implements Runnable {
                 .comUUID(comUUID)
                 .ipAddress(starIpAddress)
                 .port(starPort)
+                .build();
+    }
+
+    public SolProtocol getComponentInfoAsSolProtocol(ComponentInfo componentInfo){
+        return SolProtocol.builder()
+                .star(starUUID)
+                .sol(comUUID)
+                .comUUID(componentInfo.getComUUID())
+                .ipAddress(componentInfo.getIpAddress())
+                .port(componentInfo.getTcpPort())
                 .build();
     }
 
