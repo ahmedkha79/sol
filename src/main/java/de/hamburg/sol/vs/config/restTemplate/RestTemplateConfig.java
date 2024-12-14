@@ -1,14 +1,12 @@
-package de.hamburg.sol.vs.config.RestTemplate;
+package de.hamburg.sol.vs.config.restTemplate;
 
 
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
-import java.time.temporal.TemporalUnit;
 
 @Configuration
 public class RestTemplateConfig {
