@@ -1,10 +1,8 @@
 package de.hamburg.sol.vs.server.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
+
 
 import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
@@ -51,9 +49,9 @@ public class ComponentInfo {
         log.info("Timer wird versucht zurückzusetzen");
         try {
             if (scheduledFuture != null && !scheduledFuture.isDone()) {
-                log.info("Before cancel: isCancelled={}, isDone={}", scheduledFuture.isCancelled(), scheduledFuture.isDone());
+                log.debug("Before cancel: isCancelled={}, isDone={}", scheduledFuture.isCancelled(), scheduledFuture.isDone());
                 scheduledFuture.cancel(false);
-                log.info("After cancel: isCancelled={}, isDone={}", scheduledFuture.isCancelled(), scheduledFuture.isDone());
+                log.debug("After cancel: isCancelled={}, isDone={}", scheduledFuture.isCancelled(), scheduledFuture.isDone());
 
             }
 
@@ -70,5 +68,7 @@ public class ComponentInfo {
     public void stopTimeout(){
         scheduler.shutdownNow();
     }
+
+
 
 }
