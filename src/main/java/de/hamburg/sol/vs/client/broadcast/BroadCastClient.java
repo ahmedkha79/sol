@@ -15,7 +15,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -26,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static de.hamburg.sol.vs.config.GlobalConfig.getStarPort;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.getStarPort;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.getLocalHostAddress;
 import static de.hamburg.sol.vs.utils.ProtocolHandler.convertJsonToObject;
 @Component
@@ -106,14 +105,14 @@ public class BroadCastClient implements Runnable {
                                 registered = registerWithSol(solProtocol);
                                 log.info("Registrierung an Star: {} geschickt", solProtocol.getStar());
                                 if(registered){
-                                    log.info("Erfolgreich im Star: {} registriert", solProtocol.getSol());
+                                    log.info("Erfolgreich im Star: {} registriert", solProtocol.getStar());
                                     log.info("Solkomponente starten... mit Port: {}", serverSocket.getLocalPort());
 
 
                                     SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
                                     SolComponent solComponent = solComponentFactory.createSolComponent(solProtocol.getStar(),
                                             solProtocol.getSol(), solProtocol.getIpAddress(), solProtocol.getPort(), solProtocol.getComUUID(),
-                                            ipAddress, serverSocket.getLocalPort(), true);
+                                            ipAddress, serverSocket.getLocalPort());
 
                                     log.info("Solkomponente mit folgenden Werten: {}", solComponent);
 
