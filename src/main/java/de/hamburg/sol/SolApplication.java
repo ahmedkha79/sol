@@ -3,14 +3,14 @@ package de.hamburg.sol;
 import de.hamburg.sol.vs.client.broadcast.BroadCastClient;
 
 
-import de.hamburg.sol.vs.simulation.CommandListener;
+import de.hamburg.sol.vs.client.model.factory.SolComponentFactory;
+import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.io.IOException;
@@ -19,7 +19,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-import static de.hamburg.sol.vs.config.GlobalConfig.getStarPort;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.getStarPort;
+import static de.hamburg.sol.vs.utils.InetAddressHandler.getLocalHostAddress;
 
 @Log4j2
 @SpringBootApplication
@@ -31,8 +32,6 @@ public class SolApplication {
     @Autowired
     private ApplicationContext applicationContext;
 
-//    @Autowired
-//    private CommandListener commandListener;
 
     @Autowired
     BroadCastClient broadCastClient;
@@ -62,6 +61,7 @@ public class SolApplication {
     public void init(){
         try{
             createLogDirectory();
+            log.info("Beginne den Test");
             startApp();
 
 
@@ -74,6 +74,7 @@ public class SolApplication {
         Thread broadCastThread = new Thread(broadCastClient);
         broadCastThread.setName("BroadCastThread");
         log.info("{} wird gestartet", broadCastThread.getName());
+        log.info("Beginne den Test...");
         broadCastThread.start();
     }
 
@@ -90,6 +91,12 @@ public class SolApplication {
         } catch(Exception e){
             e.printStackTrace();
         }
+    }
+
+    public void testComponent() throws IllegalAccessException {
+        SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
+        SolComponent solComponent = solComponentFactory.createSolComponent("ajajhs3", "4325", getLocalHostAddress(), getStarPort(), "3209", "127.0.0.1", getStarPort());
+
     }
 
 
