@@ -23,6 +23,6 @@ public class SolServerConfig {
     @Bean
     @Lazy
     public SolServer solServer() throws SocketException, IllegalAccessException {
-        return new SolServer(scheduler,3, restTemplate);
+        return new SolServer(scheduler,4, restTemplate);
     }
 }
