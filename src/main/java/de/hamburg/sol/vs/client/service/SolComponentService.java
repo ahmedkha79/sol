@@ -5,7 +5,8 @@ import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import lombok.extern.log4j.Log4j2;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,18 +24,18 @@ public class SolComponentService {
 
 
 
+
+
+    @Qualifier("dynamicSolComponent")
     private SolComponent solComponent;
 
 
     private final RestTemplate restTemplate;
 
-    @Autowired
-    public SolComponentService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
 
-    public void initialize(SolComponent solComponent){
+    public SolComponentService(RestTemplate restTemplate, SolComponent solComponent) {
         this.solComponent = solComponent;
+        this.restTemplate = restTemplate;
     }
 
 
