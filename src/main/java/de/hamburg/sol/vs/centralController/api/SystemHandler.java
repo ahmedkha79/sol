@@ -9,4 +9,6 @@ public interface SystemHandler {
 
     ResponseEntity<String> handleGetRequest(String comUUID, String star);
 
+   void handleExitCommand();
+
 }
