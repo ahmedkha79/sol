@@ -40,10 +40,6 @@ public class MessageController {
             return ResponseEntity.status(412).body(HttpStatus.PRECONDITION_FAILED.getReasonPhrase());
         }
 
-        if(!messageService.checkTimeStamp(message)){
-            log.info("Changed Zeitstempel: {} ist früher als Created Zeitstempel: {}", message.getChanged(), message.getCreated());
-            return ResponseEntity.status(412).body(HttpStatus.PRECONDITION_FAILED.getReasonPhrase());
-        }
 
         if(!messageService.checkVersion(message)){
             log.info("Ungültige Version: {} angegeben", message.getVersion());
