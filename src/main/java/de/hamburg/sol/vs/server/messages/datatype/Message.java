@@ -41,4 +41,7 @@ public class Message {
 
     @JsonProperty("message")
     private String message;
+
+    @JsonProperty("status")
+    private String status;
 }
