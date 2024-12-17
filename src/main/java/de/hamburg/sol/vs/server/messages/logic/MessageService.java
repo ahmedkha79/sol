@@ -112,9 +112,21 @@ public class MessageService {
         return msgID;
     }
 
+    private void setTimeStamps(Message message){
+        LocalDateTime created = LocalDateTime.now();
+        message.setCreated(created);
+        message.setChanged(created);
+    }
+
+    private void setStatus(Message message){
+        message.setStatus("active");
+    }
+
     public Message processMessage(Message message){
         message.setSubject(cutToNLRemoveCR(message.getSubject()));
         setInitialVersion(message);
+        setTimeStamps(message);
+        setStatus(message);
         String msgID = createMSGID(message);
         message.setMsg_id(msgID);
         messages.put(msgID, message);
