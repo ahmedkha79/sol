@@ -1,11 +1,9 @@
 package de.hamburg.sol.vs.server.controller;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -14,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 
 import static de.hamburg.sol.vs.utils.InetAddressHandler.isIpReachable;
 @Log4j2
