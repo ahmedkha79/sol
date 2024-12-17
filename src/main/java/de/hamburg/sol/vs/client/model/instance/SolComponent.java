@@ -39,7 +39,7 @@ public class SolComponent {
 
     public void terminateComponent(){
         log.info("Komponente: {} wird abgeschaltet", comUUID);
-        System.exit(0);
+        System.exit(1);
     }
 
 }
