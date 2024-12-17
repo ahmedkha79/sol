@@ -5,7 +5,8 @@ import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import lombok.extern.log4j.Log4j2;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,18 +24,18 @@ public class SolComponentService {
 
 
 
+
+
+    @Qualifier("dynamicSolComponent")
     private SolComponent solComponent;
 
 
     private final RestTemplate restTemplate;
 
-    @Autowired
-    public SolComponentService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
 
-    public void initialize(SolComponent solComponent){
+    public SolComponentService(RestTemplate restTemplate, SolComponent solComponent) {
         this.solComponent = solComponent;
+        this.restTemplate = restTemplate;
     }
 
 
@@ -46,7 +47,7 @@ public class SolComponentService {
         //RestTemplate restTemplateWithTimeout = createRestTemplateWithTimeout(5000);
         while(retries < 2 && !patchSuccessful){
             try{
-                log.info("Solkomponente: {} sende Patch Beat Check", solComponent.getComPort());
+                log.info("Solkomponente: {} sende Patch Beat Check", solComponent.getComUUID());
 
                 SolProtocol solProtocol = createSolProtocol();
                 HttpHeaders headers = new HttpHeaders();
@@ -54,7 +55,7 @@ public class SolComponentService {
                 headers.setAccept(List.of(MediaType.TEXT_PLAIN));
 
                 String patchUrl = String.format("http://%s:%d/vs/v1/system/%s",solComponent.getSolIpAddress(), solComponent.getSolPort(), solComponent.getComUUID());
-                //String patchUrl = solComponent.getRestApiUrl() + "/" + solComponent.getComUUID();
+
                 log.info("Sende an folgende URL {}", patchUrl);
 
                 HttpEntity<SolProtocol> patchEntity = new HttpEntity<>(solProtocol, headers);
@@ -81,7 +82,7 @@ public class SolComponentService {
 
         if(!patchSuccessful){
             log.error("Verbindung zu Sol konnte nach {} Versuchen nicht hergestellt werden", retries);
-            //TODO terminateComponent
+            solComponent.terminateComponent();
         }
     }
 
@@ -92,6 +93,7 @@ public class SolComponentService {
             log.error("Fehler beim Warten: {}", e.getMessage());
         }
     }
+
 
     private SolProtocol createSolProtocol(){
 

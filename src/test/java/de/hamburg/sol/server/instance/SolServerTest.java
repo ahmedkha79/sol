@@ -1,6 +1,5 @@
 package de.hamburg.sol.server.instance;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.utils.ProtocolHandler;
@@ -10,27 +9,35 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Profile;
 
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static de.hamburg.sol.vs.config.GlobalConfig.*;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.*;
 
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Profile("test")
 public class SolServerTest {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+
     @Autowired
     private SolServer server;
+
+    @MockBean
+    @Lazy
     private DatagramSocket mockSocket;
     private String responseJSON;
     private byte[] data;
-
 
 
 
@@ -116,13 +123,14 @@ public class SolServerTest {
         }
     }
 
-    private void startAndStopServer() throws InterruptedException {
+    private void startAndStopServer() throws InterruptedException{
         Thread serverThread = new Thread(() -> {
-            server.listenForBroadcastsRequests();
+                server.listenForBroadcastsRequests();
+
         });
         serverThread.start();
         Thread.sleep(200);
-        server.stopServer();
+        server.stop();
         serverThread.join();
         System.out.println("Gestoppt");
 

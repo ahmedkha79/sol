@@ -3,6 +3,8 @@ package de.hamburg.sol;
 import de.hamburg.sol.vs.client.broadcast.BroadCastClient;
 
 
+import de.hamburg.sol.vs.client.model.factory.SolComponentFactory;
+import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,16 +19,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-import static de.hamburg.sol.vs.config.GlobalConfig.getStarPort;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.getStarPort;
+import static de.hamburg.sol.vs.utils.InetAddressHandler.getLocalHostAddress;
 
 @Log4j2
 @SpringBootApplication
 @EnableScheduling
+//@EnableAsync(proxyTargetClass = true)
 public class SolApplication {
 
 
     @Autowired
     private ApplicationContext applicationContext;
+
+
     @Autowired
     BroadCastClient broadCastClient;
 
@@ -55,22 +61,44 @@ public class SolApplication {
     public void init(){
         try{
             createLogDirectory();
-//
-            Thread broadCastThread = new Thread(broadCastClient);
-            broadCastThread.setName("Peer 1");
-            log.info("{} gestartet", broadCastThread.getName());
-            broadCastThread.start();
+            log.info("Beginne den Test");
+            startApp();
 
-            Thread.sleep(80000);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startApp(){
+        Thread broadCastThread = new Thread(broadCastClient);
+        broadCastThread.setName("BroadCastThread");
+        log.info("{} wird gestartet", broadCastThread.getName());
+        log.info("Beginne den Test...");
+        broadCastThread.start();
+    }
+
+    public void startTest(){
+        try {
+            startApp();
+
+            Thread.sleep(100000);
 
 
             Thread broadCastThread2 = new Thread(broadCastClient2);
             broadCastThread2.setName("Peer 2");
             broadCastThread2.start();
-        } catch (Exception e) {
+        } catch(Exception e){
             e.printStackTrace();
         }
     }
+
+    public void testComponent() throws IllegalAccessException {
+        SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
+        SolComponent solComponent = solComponentFactory.createSolComponent("ajajhs3", "4325", getLocalHostAddress(), getStarPort(), "3209", "127.0.0.1", getStarPort());
+
+    }
+
 
     private static void createLogDirectory(){
         String workingDirectory = System.getProperty("user.dir");
