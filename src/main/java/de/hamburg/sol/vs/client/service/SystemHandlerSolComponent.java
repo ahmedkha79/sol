@@ -7,9 +7,11 @@ import de.hamburg.sol.vs.utils.ProtocolHandler;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
 
 
 @Service
@@ -18,16 +20,16 @@ import org.springframework.stereotype.Service;
 public class SystemHandlerSolComponent implements SystemHandler {
 
 
-    private ApplicationContext applicationContext;
 
-//    @Qualifier("solComponentDynamic")
     private SolComponent solComponent;
 
+    private RestTemplate restTemplate;
 
 
-    public SystemHandlerSolComponent(ApplicationContext applicationContext, @Lazy SolComponent solComponent) {
-        this.applicationContext = applicationContext;
+
+    public SystemHandlerSolComponent(RestTemplate restTemplate, @Lazy SolComponent solComponent) {
         this.solComponent = solComponent;
+        this.restTemplate = restTemplate;
     }
 
 
@@ -40,6 +42,62 @@ public class SystemHandlerSolComponent implements SystemHandler {
     @Override
     public ResponseEntity<String> handleGetRequest(String comUUID, String star) {
         return handleGetAsComponent(comUUID, star);
+    }
+
+    @Override
+    public void handleExitCommand() {
+
+            String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+                    solComponent.getSolIpAddress(),
+                    solComponent.getSolPort(),
+                    solComponent.getComUUID(),
+                    solComponent.getStarUUID()
+            );
+
+            log.info("Url: {} wurde für das Abmelden erzeugt", url);
+            int retries = 0;
+            int timeOut = 10000;
+            boolean disconnectSuccessful = false;
+
+
+
+            while(retries <= 1 && !disconnectSuccessful){
+                try {
+
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setAccept(List.of(MediaType.TEXT_PLAIN));
+                    HttpEntity<String> entity = new HttpEntity<>(headers);
+                    ResponseEntity<String> deleteRequest = restTemplate.exchange(url, HttpMethod.DELETE, null, String.class);
+
+                    log.info("Sende DELETE Request raus");
+
+                    if(deleteRequest.getStatusCode().is2xxSuccessful()){
+                        log.info("Erfolgreich von Sol abgemeldet");
+                        disconnectSuccessful = true;
+
+                    } else {
+                        log.warn("Sol antwortete mit Status: {}", deleteRequest.getStatusCode());
+                        retries++;
+                        waitBeforeRetry(timeOut);
+                    }
+
+
+                } catch (Exception e) {
+                    log.error("Fehler beim Abmelden von Sol");
+                    retries++;
+                    log.error(e.getMessage());
+                }
+            }
+
+            if(!disconnectSuccessful){
+                log.info("SOL konnte nicht erreicht werden, bereite Abschaltung vor...");
+
+            }
+
+            solComponent.terminateComponent();
+
+
+
     }
 
     private ResponseEntity<String> handleGetAsComponent(String comUUID, String star) {
@@ -91,5 +149,13 @@ public class SystemHandlerSolComponent implements SystemHandler {
         solComponent.terminateComponent();
 
         return ResponseEntity.status(200).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+    }
+
+    private void waitBeforeRetry(int milliseconds){
+        try{
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException e) {
+            log.error("Fehler beim Warten: {}", e.getMessage());
+        }
     }
 }
