@@ -6,13 +6,17 @@ import de.hamburg.sol.vs.utils.UUIDGenerator;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-import static de.hamburg.sol.vs.config.GlobalConfig.*;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.*;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.*;
 
 import java.net.SocketException;
@@ -20,20 +24,18 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 
 import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 
 //Singleton
 @Log4j2
+@Lazy
 public class SolServer implements Runnable {
-    //private static SolServer instance;
+
     @Getter
     private final String comUUID;
     private LocalDateTime initializationTime;
-    private int activeComponents;
     private int maxComponents;
     @Getter
     private ComponentInfo solComponentInfo;
@@ -41,51 +43,77 @@ public class SolServer implements Runnable {
     private final String starUUID;
     @Setter
     private DatagramSocket udpSocket;
+
+    private String starIpAddress;
     private int starPort;
     //Thread-safe
-    private ConcurrentHashMap<String, ComponentInfo> components = new ConcurrentHashMap<>();
-    //Registrierungsmap
-    private ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentHashMap<String, ComponentInfo> inactiveComponents = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ComponentInfo> activeComponents = new ConcurrentHashMap<>();
+    //Preregistration
+    private final ConcurrentLinkedQueue<String> comUUIDQueue = new ConcurrentLinkedQueue<>();
+
+    private final ScheduledExecutorService scheduler;
+
     private volatile boolean running;
 
+    private final RestTemplate restTemplate;
 
-    public SolServer(int maxComponents) throws IllegalAccessException, SocketException {
+
+    public SolServer(ScheduledExecutorService scheduler, int maxComponents, RestTemplate restTemplate) throws IllegalAccessException, SocketException {
+        this.scheduler = scheduler;
         this.comUUID = generateCOM_UUID();
         this.initializationTime = LocalDateTime.now();
-        this.activeComponents = 1;
         this.maxComponents = maxComponents;
+        this.starIpAddress = getLocalHostAddress();
         this.starPort = getStarPort();
         this.solComponentInfo = new ComponentInfo(comUUID, getLocalHostAddress(), getStarPort());
         this.solComponentInfo.setStatus("200");
         this.starUUID = generateStar_UUID();
         this.udpSocket = new DatagramSocket(getStarPort());
-        components.put(comUUID, solComponentInfo);
+        putComponent(solComponentInfo);
         this.running = false;
+        this.restTemplate = restTemplate;
     }
 
 
     @Override
     public void run() {
+
+
         this.running = true;
-        log.info("Solserver wird gestartet");
+        log.info("Solserver wird gestartet mit starUUID: {}", starUUID);
 
 
         log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
 
+
         while (running) {
             listenForBroadcastsRequests();
         }
+
+        stopServer();
     }
 
-    public void stopServer() {
-        this.running = false;
+    private void stopServer() {
+        stop();
         Thread.currentThread().interrupt();
         if (udpSocket != null) {
             udpSocket.close();
         }
     }
 
+    public void stop() {
+        this.running = false;
+    }
+
+    private void terminateServer() {
+        log.info("Sol wird heruntergefahren");
+        stop();
+        System.exit(0);
+    }
+
     public void listenForBroadcastsRequests() {
+
         try {
             byte[] buffer = new byte[1024];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -101,15 +129,12 @@ public class SolServer implements Runnable {
             }
 
 
-
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
 
-    @Async
     protected void respondToHello(InetAddress address, int port) {
         try {
             String com_comUUID = generateCOM_UUID();
@@ -126,7 +151,7 @@ public class SolServer implements Runnable {
     }
 
     public int getComponentCount() {
-        return components.size();
+        return activeComponents.size();
     }
 
     public boolean freeSpace() {
@@ -138,8 +163,8 @@ public class SolServer implements Runnable {
     }
 
     public void addComponent(ComponentInfo componentInfo) {
-        if (!components.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID())) {
-            components.put(componentInfo.getComUUID(), componentInfo);
+        if ((!activeComponents.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID()))) {
+            putComponent(componentInfo);
             removeRegisterComUUID(componentInfo.getComUUID());
         } else {
             log.error("comUUID {} already exists or never send by Sol", componentInfo.getComUUID());
@@ -148,12 +173,149 @@ public class SolServer implements Runnable {
         }
     }
 
+    private void putComponent(ComponentInfo componentInfo) {
+        startComponentTimeOut(componentInfo);
+        componentInfo.setStatus("200");
+        activeComponents.put(componentInfo.getComUUID(), componentInfo);
+    }
+
+    private void startComponentTimeOut(ComponentInfo componentInfo) {
+        componentInfo.startTimeout(60, TimeUnit.SECONDS, () -> handleTimeout(componentInfo));
+    }
+
+    public synchronized void updateComponentLastSeen(String comUUID) {
+        log.info("UPDATE");
+        //ist es Sol selbst?
+        if (comUUID.equals(this.comUUID)) {
+            updateComponent(solComponentInfo);
+            log.info("Sol wird geupdatet");
+        } else if (activeComponents.containsKey(comUUID)) {
+            ComponentInfo componentInfo = activeComponents.get(comUUID);
+            updateComponent(componentInfo);
+            log.info("Komponente wird geupdatet");
+        } else {
+            log.warn("Lebenszeichen von unbekannter Komponente {}", comUUID);
+        }
+    }
+
+    private void updateComponent(ComponentInfo componentInfo) {
+        componentInfo.updateLastInteraction();
+        log.info("Komponente {} hat sich zurückgemeldet", comUUID);
+        log.info("test");
+        componentInfo.resetTimeout(60, TimeUnit.SECONDS);
+        log.info("Timer zurück gesetzt");
+    }
+
+    private void handleTimeout(ComponentInfo componentInfo) {
+        log.warn("Komponente {} reagiert nicht mehr. Sende Ping...", componentInfo.getComUUID());
+        sendPingRequest(componentInfo);
+
+    }
+
+
+    protected void sendPingRequest(ComponentInfo componentInfo) {
+        log.info("TEST");
+        String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+                componentInfo.getIpAddress(),
+                componentInfo.getTcpPort(),
+                componentInfo.getComUUID(),
+                starUUID
+        );
+        ResponseEntity<String> getRequest = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
+        log.info("Ping - Request wurde gesendet");
+        if (getRequest.getStatusCode().is2xxSuccessful()) {
+            componentInfo.setStatus(getRequest.getStatusCode().toString());
+            log.info("Komponente {} hat sich erfolgreich zurückgemeldet", componentInfo.getComUUID());
+            updateComponentLastSeen(componentInfo.getComUUID());
+        } else {
+
+            componentInfo.setStatus("disconnected");
+            moveFromActiveToInactive(componentInfo.getComUUID());
+            componentInfo.updateLastInteraction();
+        }
+
+    }
+
+    public void handleExitCommand() {
+        log.info("EXIT - Befehl erhalten, schalte alle aktiven Komponenten ab");
+        activeComponents.values().forEach(componentInfo -> {
+            sendDeleteRequestToComponent(componentInfo);
+            log.info("Komponente {} wird aus dem Stern abgeschaltet", componentInfo.getComUUID());
+            componentInfo.setStatus("disconnected");
+            moveFromActiveToInactive(componentInfo.getComUUID());
+        });
+
+        log.info("Alle Komponenten wurden kontaktiert. Beende SOL.");
+        terminateServer();
+
+
+    }
+
+    public boolean sendDeleteRequestToComponent(ComponentInfo componentInfo) {
+        String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+                componentInfo.getIpAddress(),
+                componentInfo.getTcpPort(),
+                componentInfo.getComUUID(),
+                starUUID
+        );
+        int timeout = 10000;
+        boolean deleteSuccessful = false;
+        int retries = 0;
+        while (retries < 2 && !deleteSuccessful) {
+            try {
+
+                ResponseEntity<String> deleteRequest = restTemplate.exchange(url, HttpMethod.DELETE, null, String.class);
+                log.info("Folgenden Statuscode erhalten {}", deleteRequest.getStatusCode());
+                if (deleteRequest.getStatusCode().is2xxSuccessful()) {
+                    deleteSuccessful = true;
+                } else {
+                    log.info("Komponente {} konnte nicht erreicht werden, erneut versuchen", componentInfo.getComUUID());
+                    retries++;
+                    waitBeforeRetry(timeout);
+                }
+
+            } catch (RestClientException e) {
+                log.error("Fehler beim Versenden, des DELETE Request");
+                log.error(e.getMessage());
+                retries++;
+            }
+        }
+        return deleteSuccessful;
+
+    }
+
+    private void waitBeforeRetry(int milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException e) {
+            log.error("Fehler beim Warten: {}", e.getMessage());
+        }
+    }
+
+    public synchronized void moveFromActiveToInactive(String comUUID) {
+        try {
+            log.info("Komponente: {} soll entfernt werden", comUUID);
+            ComponentInfo componentInfo = activeComponents.remove(comUUID);
+            componentInfo.stopTimeout();
+            log.info("Timer für Komponente: {} abgeschaltet", comUUID);
+            addComponentToInactiveComponents(componentInfo);
+        } catch (NoSuchElementException e) {
+            log.error("Komponente mit {} nicht vorhanden ", comUUID);
+            e.printStackTrace();
+        }
+    }
+
+    private void addComponentToInactiveComponents(ComponentInfo componentInfo) {
+        inactiveComponents.put(componentInfo.getComUUID(), componentInfo);
+
+    }
+
     public ComponentInfo getComponentInfo(String comUUID) {
-        return components.get(comUUID);
+        return activeComponents.get(comUUID);
     }
 
     public boolean checkIfComponentExists(String comUUID) {
-        return components.containsKey(comUUID);
+        return activeComponents.containsKey(comUUID);
     }
 
 
@@ -187,8 +349,28 @@ public class SolServer implements Runnable {
         String comUUID;
         do {
             comUUID = UUIDGenerator.generateCOM_UUID();
-        } while (components.containsKey(comUUID));
+        } while (activeComponents.containsKey(comUUID));
         return comUUID;
+    }
+
+    public SolProtocol getSolInfo() {
+        return SolProtocol.builder()
+                .star(starUUID)
+                .sol(comUUID)
+                .comUUID(comUUID)
+                .ipAddress(starIpAddress)
+                .port(starPort)
+                .build();
+    }
+
+    public SolProtocol getComponentInfoAsSolProtocol(ComponentInfo componentInfo) {
+        return SolProtocol.builder()
+                .star(starUUID)
+                .sol(comUUID)
+                .comUUID(componentInfo.getComUUID())
+                .ipAddress(componentInfo.getIpAddress())
+                .port(componentInfo.getTcpPort())
+                .build();
     }
 
 

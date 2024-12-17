@@ -1,0 +1,74 @@
+
+
+services:
+  sol-instance-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_PORT: ${APP_PORT}
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.101
+    ports:
+      - "${EXTERNAL_PORT_1}:${APP_PORT}"
+    depends_on:
+      - delay-service-1
+
+  sol-instance-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_PORT: ${APP_PORT}
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.102
+    ports:
+      - "${EXTERNAL_PORT_2}:${APP_PORT}"
+    depends_on:
+      - sol-instance-1
+    command: sh -c "sleep 100 && java -jar app.jar"
+
+
+  sol-instance-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_PORT: ${APP_PORT}
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.103
+    ports:
+      - "${EXTERNAL_PORT_3}:${APP_PORT}"
+    depends_on:
+      - delay-service-3
+
+  delay-service-1:
+    image: busybox
+    command: sh -c "sleep 1"
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.201
+
+  delay-service-2:
+    image: busybox
+    command: sh -c "sleep 120"
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.202
+
+  delay-service-3:
+    image: busybox
+    command: sh -c "sleep 240"
+    networks:
+      custom_network:
+        ipv4_address: 192.168.1.203
+
+networks:
+  custom_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24

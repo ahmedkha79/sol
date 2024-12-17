@@ -4,7 +4,6 @@ package de.hamburg.sol.vs.server.controller;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -13,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 
 import static de.hamburg.sol.vs.utils.InetAddressHandler.isIpReachable;
 @Log4j2
@@ -79,7 +77,7 @@ public class SolController {
                 return ResponseEntity.status(409).body(HttpStatus.CONFLICT.getReasonPhrase());
             }
 
-            componentInfo.setLastInteraction(LocalDateTime.now());
+            solServer.updateComponentLastSeen(comUUID);
             componentInfo.setStatus("200");
             log.info("comUUID: {} wurde erfolgreich gepatched", comUUID);
 
@@ -87,42 +85,6 @@ public class SolController {
     }
 
 
-    //GET nur für Sol
-    @GetMapping("/{comUUID:\\d+}")
-    public ResponseEntity<String> connectToComponent(@PathVariable String comUUID, @RequestParam("star") String starUUID) throws Exception {
-        //if(solServer.getSolComponentInfo())
-            //UNICAST Über die IP und Port
-        return null;
-    }
-
-
-    @DeleteMapping("/{comUUID:\\d+}")
-    public ResponseEntity<String> disconnectFromComponent(@PathVariable String comUUID,
-                                                          @RequestParam("star") String starUUID,
-                                                          @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedFor, HttpServletRequest request) throws Exception {
-        ComponentInfo componentInfo = solServer.getComponentInfo(comUUID);
-
-        if(componentInfo == null) return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
-
-        if(!solServer.getStarUUID().equals(starUUID)){
-            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
-        }
-        String requestIp = (forwardedFor != null) ? forwardedFor : request.getRemoteAddr();
-        if(!componentInfo.getIpAddress().equals(requestIp)){
-            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
-        }
-
-        if(!componentInfo.getStatus().equals("200")){
-            return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
-        }
-
-        componentInfo.setStatus("left");
-        componentInfo.setLastInteraction(LocalDateTime.now());
-
-        return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
-
-
-    }
 
 
 

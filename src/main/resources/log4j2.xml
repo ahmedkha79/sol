@@ -2,16 +2,17 @@
 <Configuration status="WARN">
     <Appenders>
         <!-- File Appender -->
-        <File name="File" fileName="${sys:user.dir}/logs/${date:yyyy-MM-dd_HH-mm}.log" append="false">
+        <!-- fileName="${sys:user.dir}/logs/${date:yyyy-MM-dd_HH-mm}.log" -->
+        <File name="File" fileName="${sys:user.dir}/logs/sol-application.log" append="false">
             <PatternLayout>
                 <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern>
             </PatternLayout>
         </File>
 
-        <!-- Console Appender -->
+    <!--Console Appender-->
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level: %msg%n</Pattern>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level: %msg%n%throwable</Pattern>
             </PatternLayout>
         </Console>
     </Appenders>
@@ -24,7 +25,7 @@
         </Root>
 
         <!-- Logger for Spring Boot -->
-        <Logger name="org.springframework.boot" level="INFO">
+        <Logger name="org.springframework.boot" level="WARN">
             <AppenderRef ref="Console"/>
         </Logger>
     </Loggers>

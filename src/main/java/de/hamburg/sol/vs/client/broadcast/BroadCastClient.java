@@ -15,7 +15,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -26,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static de.hamburg.sol.vs.config.GlobalConfig.getStarPort;
+import static de.hamburg.sol.vs.config.global.GlobalConfig.getStarPort;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.getLocalHostAddress;
 import static de.hamburg.sol.vs.utils.ProtocolHandler.convertJsonToObject;
 @Component
@@ -106,7 +105,7 @@ public class BroadCastClient implements Runnable {
                                 registered = registerWithSol(solProtocol);
                                 log.info("Registrierung an Star: {} geschickt", solProtocol.getStar());
                                 if(registered){
-                                    log.info("Erfolgreich im Star: {} registriert", solProtocol.getSol());
+                                    log.info("Erfolgreich im Star: {} registriert", solProtocol.getStar());
                                     log.info("Solkomponente starten... mit Port: {}", serverSocket.getLocalPort());
 
 
@@ -123,7 +122,6 @@ public class BroadCastClient implements Runnable {
 
                                     isBroadcasting = false;
 
-                                    //component.startComponent();
                                     break;
 
                                 }
@@ -227,12 +225,6 @@ public class BroadCastClient implements Runnable {
         return false;
     }
 
-    private RestTemplate createRestTemplateWithTimeout(int timeoutMillis){
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(timeoutMillis);
-        requestFactory.setReadTimeout(timeoutMillis);
-        return new RestTemplate(requestFactory);
-    }
 
 
 

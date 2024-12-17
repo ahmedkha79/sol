@@ -1,14 +1,18 @@
 package de.hamburg.sol.vs.client.model.instance;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import de.hamburg.sol.vs.protocol.SolProtocol;
+import lombok.*;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Log4j2
+@Lazy
+@Component
 public class SolComponent {
 
     private String starUUID;
@@ -19,22 +23,24 @@ public class SolComponent {
     private String comUUID;
     private String comIpAddress;
     private int comPort;
-    //private ServerSocket tcpServerSocket;
-    //private final String restApiUrl = String.format("http://%s:%d/vs/v1/system", solIpAddress, solPort);
-
-
-
-//    public void startComponent(){
-//        try {
-//            //tcpServerSocket = new ServerSocket(comPort);
-//        } catch(IOException e){
-//            e.printStackTrace();
-//            System.out.println("TCP Socket konnte nicht erzeugt werden");
-//        }
 
 
 
 
+    public SolProtocol getComponentInfo(){
+        return SolProtocol.builder()
+                .star(starUUID)
+                .sol(solUUID)
+                .comUUID(comUUID)
+                .ipAddress(comIpAddress)
+                .port(comPort)
+                .build();
+    }
+
+    public void terminateComponent(){
+        log.info("Komponente: {} wird abgeschaltet", comUUID);
+        System.exit(1);
+    }
 
 }
 

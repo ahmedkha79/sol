@@ -5,6 +5,7 @@ import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.client.service.SolComponentService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.support.GenericWebApplicationContext;
 
 @Component
 public class SolComponentFactory {
@@ -27,8 +28,12 @@ public class SolComponentFactory {
                 .comIpAddress(comIpAddress)
                 .comPort(comPort)
                 .build();
-        SolComponentService service = applicationContext.getBean(SolComponentService.class);
-        service.initialize(solComponent);
+        ((GenericWebApplicationContext) applicationContext).registerBean("dynamicSolComponent", SolComponent.class, () -> solComponent, bd -> bd.setPrimary(true));
+        applicationContext.getBean(SolComponent.class);
+
+        applicationContext.getBean(SolComponentService.class);
+
         return solComponent;
     }
+
 }
