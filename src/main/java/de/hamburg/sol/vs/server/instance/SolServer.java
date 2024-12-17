@@ -9,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.DatagramPacket;
@@ -83,29 +84,36 @@ public class SolServer implements Runnable {
         log.info("Solserver wird gestartet mit starUUID: {}", starUUID);
 
 
-
         log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
+
 
         while (running) {
             listenForBroadcastsRequests();
         }
+
+        stopServer();
     }
 
-    public void stopServer() {
-        this.running = false;
+    private void stopServer() {
+        stop();
         Thread.currentThread().interrupt();
         if (udpSocket != null) {
             udpSocket.close();
         }
     }
 
-    private void terminateServer(){
+    public void stop() {
+        this.running = false;
+    }
+
+    private void terminateServer() {
         log.info("Sol wird heruntergefahren");
-        stopServer();
+        stop();
         System.exit(0);
     }
 
     public void listenForBroadcastsRequests() {
+
         try {
             byte[] buffer = new byte[1024];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -119,8 +127,6 @@ public class SolServer implements Runnable {
             } else {
                 log.warn("Unknown request: {}", request);
             }
-
-
 
 
         } catch (Exception e) {
@@ -169,6 +175,7 @@ public class SolServer implements Runnable {
 
     private void putComponent(ComponentInfo componentInfo) {
         startComponentTimeOut(componentInfo);
+        componentInfo.setStatus("200");
         activeComponents.put(componentInfo.getComUUID(), componentInfo);
     }
 
@@ -242,7 +249,6 @@ public class SolServer implements Runnable {
         terminateServer();
 
 
-
     }
 
     public boolean sendDeleteRequestToComponent(ComponentInfo componentInfo) {
@@ -255,10 +261,11 @@ public class SolServer implements Runnable {
         int timeout = 10000;
         boolean deleteSuccessful = false;
         int retries = 0;
-        while(retries < 2 && !deleteSuccessful) {
+        while (retries < 2 && !deleteSuccessful) {
             try {
 
                 ResponseEntity<String> deleteRequest = restTemplate.exchange(url, HttpMethod.DELETE, null, String.class);
+                log.info("Folgenden Statuscode erhalten {}", deleteRequest.getStatusCode());
                 if (deleteRequest.getStatusCode().is2xxSuccessful()) {
                     deleteSuccessful = true;
                 } else {
@@ -267,26 +274,31 @@ public class SolServer implements Runnable {
                     waitBeforeRetry(timeout);
                 }
 
-            } catch (Exception e){
+            } catch (RestClientException e) {
                 log.error("Fehler beim Versenden, des DELETE Request");
+                log.error(e.getMessage());
+                retries++;
             }
         }
         return deleteSuccessful;
 
     }
 
-    private void waitBeforeRetry(int milliseconds){
-        try{
+    private void waitBeforeRetry(int milliseconds) {
+        try {
             Thread.sleep(milliseconds);
         } catch (InterruptedException e) {
             log.error("Fehler beim Warten: {}", e.getMessage());
         }
     }
 
-    private void moveFromActiveToInactive(String comUUID) {
+    public synchronized void moveFromActiveToInactive(String comUUID) {
         try {
-           ComponentInfo componentInfo = activeComponents.remove(comUUID);
-           addComponentToInactiveComponents(componentInfo);
+            log.info("Komponente: {} soll entfernt werden", comUUID);
+            ComponentInfo componentInfo = activeComponents.remove(comUUID);
+            componentInfo.stopTimeout();
+            log.info("Timer für Komponente: {} abgeschaltet", comUUID);
+            addComponentToInactiveComponents(componentInfo);
         } catch (NoSuchElementException e) {
             log.error("Komponente mit {} nicht vorhanden ", comUUID);
             e.printStackTrace();
@@ -295,6 +307,7 @@ public class SolServer implements Runnable {
 
     private void addComponentToInactiveComponents(ComponentInfo componentInfo) {
         inactiveComponents.put(componentInfo.getComUUID(), componentInfo);
+
     }
 
     public ComponentInfo getComponentInfo(String comUUID) {
@@ -350,7 +363,7 @@ public class SolServer implements Runnable {
                 .build();
     }
 
-    public SolProtocol getComponentInfoAsSolProtocol(ComponentInfo componentInfo){
+    public SolProtocol getComponentInfoAsSolProtocol(ComponentInfo componentInfo) {
         return SolProtocol.builder()
                 .star(starUUID)
                 .sol(comUUID)
