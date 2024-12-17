@@ -68,6 +68,11 @@ public class SystemHandlerSolServer implements SystemHandler {
 
     }
 
+    @Override
+    public void handleExitCommand() {
+        solServer.handleExitCommand();
+    }
+
     private boolean checkComUUID(String comUUID) {
         if(comUUID == null || comUUID.isEmpty()){
             log.warn("comUUID nicht mit angegeben");
@@ -77,13 +82,15 @@ public class SystemHandlerSolServer implements SystemHandler {
     }
 
     private boolean checkStarUUID(String starUUID){
-        if(starUUID == null || starUUID.isEmpty() || !solServer.equals(starUUID)){
+        if(starUUID == null || starUUID.isEmpty() || !solServer.getStarUUID().equals(starUUID)){
             log.warn("starUUID nicht mit angegeben oder falsch");
             return false;
         }
 
         return true;
     }
+
+
 
 
     private ResponseEntity<String> handleDeleteAsServer(String comUUID, String star){
@@ -93,8 +100,8 @@ public class SystemHandlerSolServer implements SystemHandler {
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
         }
 
-        if(checkComUUID(star)){
-            log.warn("Inkorrekte starUUID: {}", star);
+        if(!checkStarUUID(star)){
+            log.warn("Inkorrekte : {}", star);
             return ResponseEntity.status(409).body(HttpStatus.CONFLICT.getReasonPhrase());
         }
 
@@ -104,11 +111,11 @@ public class SystemHandlerSolServer implements SystemHandler {
             log.warn("Solkomponente: {} nicht Teil des Sternensystems", comUUID);
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
         }
-        
-        log.info("Werte die IP-Adresse der SolComponent aus: {}", comUUID);
+
 
 
         if(!componentInfo.getStatus().equals("200")){
+            log.info("Status der Komponente ist: ", componentInfo.getStatus());
             log.info("SolComponent {} ist inaktiv oder konnte nicht gefunden werden", comUUID);
             return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
         }
