@@ -123,13 +123,14 @@ public class SolServerTest {
         }
     }
 
-    private void startAndStopServer() throws InterruptedException {
+    private void startAndStopServer() throws InterruptedException{
         Thread serverThread = new Thread(() -> {
-            server.listenForBroadcastsRequests();
+                server.listenForBroadcastsRequests();
+
         });
         serverThread.start();
         Thread.sleep(200);
-        server.stopServer();
+        server.stop();
         serverThread.join();
         System.out.println("Gestoppt");
 
