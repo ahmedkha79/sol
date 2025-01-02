@@ -3,14 +3,17 @@ package de.hamburg.sol.vs.server.messages.logic;
 
 import de.hamburg.sol.vs.server.instance.SolServer;
 import de.hamburg.sol.vs.server.messages.datatype.Message;
+import de.hamburg.sol.vs.server.messages.datatype.MessageList;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
@@ -21,17 +24,29 @@ public class MessageService {
     private final Map<String, Message> messages = new HashMap<>();
     private final AtomicLong nonceCounter = new AtomicLong(1);
 
+    private final List<String> validScopes = List.of("active", "all");
+
+    private final String metaView = "id";
+    private final String allView = "header";
+
+    private final List<String> validViews = List.of(metaView, allView);
+
+    private final String activeStatus = "active";
+    private final String deleteStatus = "deleted";
+
+
+
     public MessageService(@Lazy SolServer solServer) {
         this.solServer = solServer;
     }
 
     /**
      * Checks if the given Message has the correct star
-     * @param message
+     * @param star
      * @return true if star is correct, false if star is null, empty or not equal to the sol StarUUID
      */
-    public boolean validateStar(Message message){
-        if(message.getStar() == null || message.getStar().isEmpty() || !message.getStar().equals(solServer.getStarUUID())){
+    public boolean validateStar(String star){
+        if(star == null || star.isEmpty() || !star.equals(solServer.getStarUUID())){
             return false;
         }
 
@@ -54,15 +69,19 @@ public class MessageService {
 
     /**
      * Checks if the MSG_ID is empty
-     * @param message
+     * @param msg_id
      * @return true if the MSG_ID is empty, false if not
      */
 
-    public boolean checkIfMsgIDIsEmpty(Message message){
-        if(!checkIfStringIsEmpty(message.getMsg_id())){
+    public boolean checkIfMsgIDIsEmpty(String msg_id){
+        if(!checkIfStringIsEmpty(msg_id)){
             return false;
         }
         return true;
+    }
+
+    public boolean checkMessageWithID(String msg_id){
+        return messages.containsKey(msg_id);
     }
 
     private boolean checkIfStringIsEmpty(String string){
@@ -119,7 +138,7 @@ public class MessageService {
     }
 
     private void setStatus(Message message){
-        message.setStatus("active");
+        setStatus(message, activeStatus );
     }
 
     public Message processMessage(Message message){
@@ -135,6 +154,76 @@ public class MessageService {
         log.debug("Map-Size: {}", messages.size());
 
         return message;
+    }
+
+    public boolean deleteMessage(String msgID){
+        Message message = messages.get(msgID);
+        if(message == null){
+            return false;
+        } else {
+            setStatus(message, deleteStatus);
+            message.updateChanged();
+        }
+        return true;
+    }
+
+    public void setStatus(Message message, String status){
+        message.setStatus(status);
+    }
+
+    public MessageList getMessages(String starUUID, String scope, String view){
+        String tempScope = validScopes.contains(scope) ? scope : activeStatus;
+
+        String  tempView = validViews.contains(view) ? view : metaView;
+
+
+        List<Message> messageListResponse = messages.values().stream()
+                .filter(msg -> "all".equals(tempScope) || activeStatus.equals(msg.getStatus()))
+                .filter(msg -> starUUID.equals(msg.getStar()))
+                .map(msg -> mapToMessageView(msg, tempView))
+                .toList();
+        return createMessageListResponse(messageListResponse, tempScope, tempView);
+
+
+    }
+
+
+    public MessageList getSingleMessage(String msg_id){
+        Message msg = messages.get(msg_id);
+        Message result;
+        if(msg == null){
+            return null;
+        }
+
+        if(msg.getStatus() == activeStatus){
+            result = mapToMessageView(msg, allView);
+        } else {
+            result = mapToMessageView(msg, metaView);
+        }
+
+        return createMessageListResponse(List.of(result), null, null);
+    }
+
+    private MessageList createMessageListResponse(List<Message> messages, String scope, String view){
+        MessageList messageList = new MessageList();
+        messageList.setStar(solServer.getStarUUID());
+        messageList.setTotalResults(messages.size());
+        messageList.setScope(scope);
+        messageList.setView(view);
+        messageList.setMessages(messages);
+
+        return messageList;
+    }
+
+    private Message mapToMessageView(Message msg, String view){
+        if("header".equals(view)){
+            return msg;
+        } else {
+            return Message.builder()
+                    .msg_id(msg.getMsg_id())
+                    .status(msg.getStatus())
+                    .build();
+        }
     }
 
 }
