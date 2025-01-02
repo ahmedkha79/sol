@@ -122,6 +122,7 @@ public class SystemHandlerSolServer implements SystemHandler {
 
         componentInfo.updateLastInteraction();
         componentInfo.setStatus("left");
+        solServer.moveFromActiveToInactive(comUUID);
 
         log.info("SolComponent {} wurde erfolgreich aus dem Stern entfernt", comUUID);
         return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
