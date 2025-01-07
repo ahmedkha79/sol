@@ -1,11 +1,16 @@
 package de.hamburg.sol.vs.server.instance;
 
+import de.hamburg.sol.vs.galaxy.datatype.StarInfo;
+import de.hamburg.sol.vs.galaxy.model.GalaxyModel;
+import de.hamburg.sol.vs.galaxy.service.GalaxyService;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.server.model.ComponentInfo;
 import de.hamburg.sol.vs.utils.UUIDGenerator;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -31,10 +36,11 @@ import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 //Singleton
 @Log4j2
 @Lazy
-public class SolServer implements Runnable {
+public class SolServer {
 
     @Getter
     private final String comUUID;
+    @Getter
     private LocalDateTime initializationTime;
     private int maxComponents;
     @Getter
@@ -44,7 +50,9 @@ public class SolServer implements Runnable {
     @Setter
     private DatagramSocket udpSocket;
 
+    @Getter
     private String starIpAddress;
+
     private int starPort;
     //Thread-safe
     private final ConcurrentHashMap<String, ComponentInfo> inactiveComponents = new ConcurrentHashMap<>();
@@ -54,12 +62,18 @@ public class SolServer implements Runnable {
 
     private final ScheduledExecutorService scheduler;
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Getter
     private volatile boolean running;
 
     private final RestTemplate restTemplate;
 
+    private GalaxyModel galaxyModel;
 
-    public SolServer(ScheduledExecutorService scheduler, int maxComponents, RestTemplate restTemplate) throws IllegalAccessException, SocketException {
+
+    public SolServer(ScheduledExecutorService scheduler, int maxComponents, RestTemplate restTemplate, GalaxyModel galaxyModel) throws SocketException, IllegalAccessException {
         this.scheduler = scheduler;
         this.comUUID = generateCOM_UUID();
         this.initializationTime = LocalDateTime.now();
@@ -69,37 +83,63 @@ public class SolServer implements Runnable {
         this.solComponentInfo = new ComponentInfo(comUUID, getLocalHostAddress(), getStarPort());
         this.solComponentInfo.setStatus("200");
         this.starUUID = generateStar_UUID();
-        this.udpSocket = new DatagramSocket(getStarPort());
+        setStarUUID(starUUID);
+        this.udpSocket = new DatagramSocket(starPort);
         putComponent(solComponentInfo);
         this.running = false;
         this.restTemplate = restTemplate;
+        this.galaxyModel = galaxyModel;
+        StarInfo starInfo = StarInfo.builder()
+                .star(starUUID)
+                .sol(comUUID)
+                .ipAddress(starIpAddress)
+                .port(starPort)
+                .number_of_components(getComponentCount())
+                .status(solComponentInfo.getStatus())
+                .build();
+        galaxyModel.putStarIntoMap(starInfo);
+
+
     }
 
 
-    @Override
-    public void run() {
+//    @Override
+//    public void run() {
+//
+//
+//        this.running = true;
+//
+//
+//        log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
+//
+//
+//        applicationContext.getBean(GalaxyService.class);
+//
+//
+//        while (running) {
+//            listenForBroadcastsRequests();
+//        }
+//
+//        stopServer();
+//    }
 
 
+    public void start(){
         this.running = true;
         log.info("Solserver wird gestartet mit starUUID: {}", starUUID);
+        Thread broadcastListener = new Thread(this::listenForBroadcastsRequests);
+        broadcastListener.start();
+        applicationContext.getBean(GalaxyService.class);
 
 
-        log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
-
-
-        while (running) {
-            listenForBroadcastsRequests();
-        }
-
-        stopServer();
     }
 
     private void stopServer() {
-        stop();
-        Thread.currentThread().interrupt();
         if (udpSocket != null) {
             udpSocket.close();
         }
+        stop();
+        Thread.currentThread().interrupt();
     }
 
     public void stop() {
@@ -108,30 +148,40 @@ public class SolServer implements Runnable {
 
     private void terminateServer() {
         log.info("Sol wird heruntergefahren");
-        stop();
+        stopServer();
         System.exit(0);
     }
 
     public void listenForBroadcastsRequests() {
 
         try {
-            byte[] buffer = new byte[1024];
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-            udpSocket.receive(packet);
+            while (running) {
+                byte[] buffer = new byte[1024];
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                try {
+                    udpSocket.receive(packet);
+                } catch (SocketException e) {
+                    if(!running){
+                        log.info("Socket wurde geschlossen");
+                        break;
+                    }
+                }
 
-            String request = new String(packet.getData(), 0, packet.getLength());
+                String request = new String(packet.getData(), 0, packet.getLength());
 
-            log.info("Empfangene Nachricht: {}", request);
-            if (request.equals("HELLO?")) {
-                respondToHello(packet.getAddress(), packet.getPort());
-            } else {
-                log.warn("Unknown request: {}", request);
+                log.info("Empfangene Nachricht: {}", request);
+                if (request.equals("HELLO?")) {
+                    respondToHello(packet.getAddress(), packet.getPort());
+                } else {
+                    log.warn("Unknown request: {}", request);
+                }
             }
 
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            } catch(Exception e){
+                e.printStackTrace();
+            }
+
     }
 
 
@@ -242,7 +292,9 @@ public class SolServer implements Runnable {
             sendDeleteRequestToComponent(componentInfo);
             log.info("Komponente {} wird aus dem Stern abgeschaltet", componentInfo.getComUUID());
             componentInfo.setStatus("disconnected");
-            moveFromActiveToInactive(componentInfo.getComUUID());
+            if(!componentInfo.getComUUID().equals(solComponentInfo.getComUUID())) {
+                moveFromActiveToInactive(componentInfo.getComUUID());
+            }
         });
 
         log.info("Alle Komponenten wurden kontaktiert. Beende SOL.");
@@ -258,6 +310,8 @@ public class SolServer implements Runnable {
                 componentInfo.getComUUID(),
                 starUUID
         );
+
+        log.info("Url: {}", url);
         int timeout = 10000;
         boolean deleteSuccessful = false;
         int retries = 0;
@@ -294,11 +348,17 @@ public class SolServer implements Runnable {
 
     public synchronized void moveFromActiveToInactive(String comUUID) {
         try {
-            log.info("Komponente: {} soll entfernt werden", comUUID);
-            ComponentInfo componentInfo = activeComponents.remove(comUUID);
-            componentInfo.stopTimeout();
-            log.info("Timer für Komponente: {} abgeschaltet", comUUID);
-            addComponentToInactiveComponents(componentInfo);
+
+                if (activeComponents.containsKey(comUUID)) {
+                    log.info("Komponente: {} soll entfernt werden", comUUID);
+                    ComponentInfo componentInfo = activeComponents.remove(comUUID);
+                    componentInfo.stopTimeout();
+                    log.info("Timer für Komponente: {} abgeschaltet", comUUID);
+                    addComponentToInactiveComponents(componentInfo);
+                } else {
+                    log.info("comUUID: {} bereits verschoben und nicht vorhanden", comUUID);
+                }
+
         } catch (NoSuchElementException e) {
             log.error("Komponente mit {} nicht vorhanden ", comUUID);
             e.printStackTrace();
@@ -371,6 +431,14 @@ public class SolServer implements Runnable {
                 .ipAddress(componentInfo.getIpAddress())
                 .port(componentInfo.getTcpPort())
                 .build();
+    }
+
+    public StarInfo updateAndGetStarInfo(){
+        StarInfo starInfo = galaxyModel.getStarInfo(starUUID);
+        starInfo.setStatus(solComponentInfo.getStatus());
+        starInfo.setNumber_of_components(getComponentCount());
+        galaxyModel.putStarIntoMap(starInfo);
+        return starInfo;
     }
 
 
