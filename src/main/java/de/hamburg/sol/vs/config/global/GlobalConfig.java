@@ -1,14 +1,22 @@
 package de.hamburg.sol.vs.config.global;
 
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
 public class GlobalConfig {
 
     private static Integer STARPORT;
     private static Integer GROUP_ID;
     private static Integer GALAXY_PORT;
     private static Integer GALAXY_ID;
+
+    private static String starUUID;
+
     private static final Integer DEFAULT_PORT = 8000;
     private static final int DEFAULT_GROUP_ID = 131;
     private static final int DEFAULT_GALAXY_ID = 200;
+
+
 
 
     static {
@@ -55,6 +63,26 @@ public class GlobalConfig {
         return GROUP_ID;
     }
 
+    public static int getGalaxyPort(){
+        return GALAXY_PORT;
+    }
 
+    public static String getStarUUID() throws IllegalAccessException {
+        if(starUUID == null) {
+            throw new IllegalAccessException("Sol wurde nicht gestartet... ");
+        } else {
+            return starUUID;
+        }
+    }
+
+    public static String setStarUUID(String starUUID) {
+       if(GlobalConfig.starUUID == null) {
+           GlobalConfig.starUUID = starUUID;
+           log.info("starUUID: {} wurde gesetzt", starUUID);
+       }
+
+       return GlobalConfig.starUUID;
+
+    }
 
 }
