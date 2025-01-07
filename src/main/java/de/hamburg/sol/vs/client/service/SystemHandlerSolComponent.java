@@ -142,13 +142,28 @@ public class SystemHandlerSolComponent implements SystemHandler {
 
 
     private ResponseEntity<String> handleDeleteAsComponent(String comUUID, String star){
-        if(!solComponent.getStarUUID().equals(star) || solComponent.getComUUID().equals(comUUID)){
+        if(!solComponent.getStarUUID().equals(star) || !solComponent.getComUUID().equals(comUUID)){
+            log.error("Stern ist {} ist aber {}", solComponent.getStarUUID(), solComponent.getComUUID());
+            log.error("comUUID ist {} ist aber {}", solComponent.getComUUID(), comUUID);
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
         }
 
-        solComponent.terminateComponent();
+        ResponseEntity<String> response = ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
 
-        return ResponseEntity.status(200).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+        // Starte den Hintergrund-Thread
+        new Thread(() -> {
+            try {
+                // Führe die Hintergrundaufgabe aus
+                solComponent.terminateComponent();
+                log.info("Komponente erfolgreich beendet.");
+            } catch (Exception e) {
+                log.error("Fehler beim Beenden der Komponente: {}", e.getMessage());
+            }
+        }).start();
+
+        log.info("Bereite die Abschaltung vor...");
+
+        return response;
     }
 
     private void waitBeforeRetry(int milliseconds){
