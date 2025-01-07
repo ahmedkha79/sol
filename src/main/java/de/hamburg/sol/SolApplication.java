@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import static de.hamburg.sol.vs.config.global.GlobalConfig.getGalaxyPort;
 import static de.hamburg.sol.vs.config.global.GlobalConfig.getStarPort;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.getLocalHostAddress;
 
@@ -47,8 +48,10 @@ public class SolApplication {
 
         try{
             int port = getStarPort();
+            int galaxyPort = getGalaxyPort();
             application.setDefaultProperties(Map.of("server.port", port));
             log.info("Starte Application auf dem Port: {}", port);
+            log.info("Galaxy-Port: {}", galaxyPort);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
