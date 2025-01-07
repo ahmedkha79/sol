@@ -52,6 +52,7 @@ public class SystemHandlerSolServer implements SystemHandler {
             return ResponseEntity.status(409).body(HttpStatus.CONFLICT.getReasonPhrase());
         }
 
+        log.info("Erfolgreich Komponente: {} gefunden", comUUID);
         SolProtocol solProtocol = solServer.getComponentInfoAsSolProtocol(ci);
         solProtocol.setStatus("200");
         String protocol = "";
@@ -114,8 +115,8 @@ public class SystemHandlerSolServer implements SystemHandler {
 
 
 
-        if(!componentInfo.getStatus().equals("200")){
-            log.info("Status der Komponente ist: ", componentInfo.getStatus());
+        if(!componentInfo.getStatus().contains("200")){
+            log.info("Status der Komponente ist: {} ", componentInfo.getStatus());
             log.info("SolComponent {} ist inaktiv oder konnte nicht gefunden werden", comUUID);
             return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
         }
