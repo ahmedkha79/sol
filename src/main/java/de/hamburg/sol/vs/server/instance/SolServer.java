@@ -54,6 +54,8 @@ public class SolServer {
     private String starIpAddress;
 
     private int starPort;
+
+    private int galaxyPort;
     //Thread-safe
     private final ConcurrentHashMap<String, ComponentInfo> inactiveComponents = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ComponentInfo> activeComponents = new ConcurrentHashMap<>();
@@ -97,6 +99,7 @@ public class SolServer {
                 .number_of_components(getComponentCount())
                 .status(solComponentInfo.getStatus())
                 .build();
+        this.galaxyPort = getGalaxyPort();
         galaxyModel.putStarIntoMap(starInfo);
 
 
@@ -234,15 +237,15 @@ public class SolServer {
     }
 
     public synchronized void updateComponentLastSeen(String comUUID) {
-        log.info("UPDATE");
+
         //ist es Sol selbst?
         if (comUUID.equals(this.comUUID)) {
             updateComponent(solComponentInfo);
-            log.info("Sol wird geupdatet");
+            log.info("Sol wird aktualisiert");
         } else if (activeComponents.containsKey(comUUID)) {
             ComponentInfo componentInfo = activeComponents.get(comUUID);
             updateComponent(componentInfo);
-            log.info("Komponente wird geupdatet");
+            log.info("Komponente wird aktualisiert");
         } else {
             log.warn("Lebenszeichen von unbekannter Komponente {}", comUUID);
         }
@@ -264,7 +267,7 @@ public class SolServer {
 
 
     protected void sendPingRequest(ComponentInfo componentInfo) {
-        log.info("TEST");
+
         String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
                 componentInfo.getIpAddress(),
                 componentInfo.getTcpPort(),
@@ -274,7 +277,7 @@ public class SolServer {
         ResponseEntity<String> getRequest = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
         log.info("Ping - Request wurde gesendet");
         if (getRequest.getStatusCode().is2xxSuccessful()) {
-            componentInfo.setStatus(getRequest.getStatusCode().toString());
+            componentInfo.setStatus("200");
             log.info("Komponente {} hat sich erfolgreich zurückgemeldet", componentInfo.getComUUID());
             updateComponentLastSeen(componentInfo.getComUUID());
         } else {
@@ -286,16 +289,37 @@ public class SolServer {
 
     }
 
-    public void handleExitCommand() {
-        log.info("EXIT - Befehl erhalten, schalte alle aktiven Komponenten ab");
+    private void disconnectFromAllStars(){
+        galaxyModel.getAllStars().forEach(starInfo -> {
+            if(!starInfo.getStar().equals(starUUID)) {
+                sendDeleteRequest(generateUrlForStar(starInfo, starUUID));
+                log.info("Delete Request an star {} geschickt", starUUID);
+            }
+        });
+    }
+
+    private void disconnectAllComponents(){
         activeComponents.values().forEach(componentInfo -> {
-            sendDeleteRequestToComponent(componentInfo);
+            sendDeleteRequest(generateUrlForComponent(componentInfo, starUUID));
+
             log.info("Komponente {} wird aus dem Stern abgeschaltet", componentInfo.getComUUID());
+
             componentInfo.setStatus("disconnected");
             if(!componentInfo.getComUUID().equals(solComponentInfo.getComUUID())) {
                 moveFromActiveToInactive(componentInfo.getComUUID());
             }
         });
+    }
+
+    public void handleExitCommand() {
+        //Delete Anfragen an alle bekannten Sterne
+        log.info("Melde Sol von allen bekannten Sternen ab");
+        disconnectFromAllStars();
+        log.info("Alle bekannten Sterne kontaktiert");
+
+        //Delete Anfragen an Komponenten
+        log.info("Schalte alle aktiven Komponenten ab");
+        disconnectAllComponents();
 
         log.info("Alle Komponenten wurden kontaktiert. Beende SOL.");
         terminateServer();
@@ -303,13 +327,19 @@ public class SolServer {
 
     }
 
-    public boolean sendDeleteRequestToComponent(ComponentInfo componentInfo) {
-        String url = String.format("http://%s:%d/vs/v1/system/%s?star=%s",
+    private String generateUrlForStar(StarInfo starInfo, String starUUID){
+        return String.format("http:%s:%d/vs/v1/star/%s", starInfo.getIpAddress(), galaxyPort, starUUID);
+    }
+    private String generateUrlForComponent(ComponentInfo componentInfo, String starUUID) {
+        return String.format("http://%s:%d/vs/v1/system/%s?star=%s",
                 componentInfo.getIpAddress(),
                 componentInfo.getTcpPort(),
                 componentInfo.getComUUID(),
                 starUUID
         );
+    }
+
+    public boolean sendDeleteRequest(String url) {
 
         log.info("Url: {}", url);
         int timeout = 10000;
@@ -323,7 +353,7 @@ public class SolServer {
                 if (deleteRequest.getStatusCode().is2xxSuccessful()) {
                     deleteSuccessful = true;
                 } else {
-                    log.info("Komponente {} konnte nicht erreicht werden, erneut versuchen", componentInfo.getComUUID());
+                    log.info("Url:{} konnte nicht erreicht werden, erneut versuchen", url);
                     retries++;
                     waitBeforeRetry(timeout);
                 }

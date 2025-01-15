@@ -1,28 +1,28 @@
-package de.hamburg.sol.vs.server.messages.controller;
+package de.hamburg.sol.vs.server.messages.controller.v2;
 
-import de.hamburg.sol.vs.server.messages.datatype.Message;
-import de.hamburg.sol.vs.server.messages.datatype.MessageList;
+import de.hamburg.sol.vs.messages.api.MessageHandler;
+import de.hamburg.sol.vs.messages.datatype.Message;
+import de.hamburg.sol.vs.messages.datatype.MessageList;
 import de.hamburg.sol.vs.server.messages.logic.MessageService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Service;
 
-@RestController
-@RequestMapping("vs/v1/messages")
+@Service
 @Log4j2
-public class MessageController {
+@Lazy
+public class MessageHandlerSolServer implements MessageHandler {
 
     private final MessageService messageService;
 
-    public MessageController(@Lazy final MessageService messageService) {
+    public MessageHandlerSolServer(@Lazy final MessageService messageService) {
         this.messageService = messageService;
     }
 
 
-    @PostMapping("")
-    public ResponseEntity<String> createMessage(@RequestBody Message message) {
+    public ResponseEntity<String> handlePostMessageRequest(Message message) {
         if(!messageService.validateStar(message.getStar())){
             log.info("star: {} ist inkorrekt oder nicht angegeben", message.getStar());
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
@@ -45,42 +45,52 @@ public class MessageController {
         }
 
 
-        Message processdMessage = messageService.processMessage(message);
+        String msgUUID = messageService.processMessageAndForward(message);
         log.info("Nachricht wurde von Sol aufgenommen und gespeichert");
 
-        return ResponseEntity.status(200).body(processdMessage.getMsg_id());
+        return ResponseEntity.status(200).body(msgUUID);
 
 
     }
 
-    @DeleteMapping("/{msg_id}")
-    public ResponseEntity<?> deleteMessage(@PathVariable String msg_id, @RequestParam String star){
-        if(!messageService.validateStar(star)){
-            log.info("star: {} ist inkorrekt oder nicht angegeben", star);
+    @Override
+    public ResponseEntity<String> handleReceivedPostMessageRequest(String msg_id, Message message) {
+
+        if(msg_id == null || msg_id.isEmpty()){
+            log.info("Msg_id: {} ist leer oder null", msg_id);
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
         }
 
-        if(messageService.checkIfMsgIDIsEmpty(msg_id) || !messageService.checkMessageWithID(msg_id)){
-            log.info("MSG_ID: {} ist leer sein oder existiert nicht", msg_id);
-            return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
-        }
+        messageService.receiveMessageAndSave(message);
+        log.info("Nachricht von Stern: {} erhalten", message.getFrom_star());
+        log.debug("Folgende Nachricht: {} erhalten", message);
 
-        if(messageService.deleteMessage(msg_id)){
-            return ResponseEntity.status(200).body(HttpStatus.OK.getReasonPhrase());
-        }
-            log.warn("Nachricht konnte nicht gelöscht werden");
-            return ResponseEntity.status(412).body(HttpStatus.PRECONDITION_FAILED.getReasonPhrase());
+        return ResponseEntity.ok("Message received and saved");
+    }
+
+    public ResponseEntity<String> handleDeleteMessage( String msg_id, String star){
+      if(!messageService.containsStar(star)){
+          log.info("Stern: {} in der Galaxie nicht bekannt", star);
+          return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
+      }
+
+      if(messageService.checkIfMsgIDIsEmpty(msg_id) || !messageService.checkMessageWithID(msg_id)){
+          log.info("Msg_id: {} ist leer oder konnte nicht gefunden werden", msg_id);
+          return ResponseEntity.status(404).body(HttpStatus.NOT_FOUND.getReasonPhrase());
+      }
+
+      messageService.receiveDeleteAndForward(msg_id, star);
+      log.info("Nachricht: {} wird gelöscht", msg_id);
+      return ResponseEntity.ok("Message deleted");
+
 
 
     }
 
 
-    @GetMapping()
-    public ResponseEntity<?> getMessages(@RequestParam String star,
-                                         @RequestParam(value = "scope", defaultValue = "active") String scope,
-                                         @RequestParam(value = "view", defaultValue = "id") String view){
+    public ResponseEntity<?> handleGetMessageRequest(String star, String scope, String view){
 
-        if(!messageService.validateStar(star)){
+        if(!star.equals("all") && !messageService.containsStar(star)){
             log.info("star: {} ist inkorrekt oder nicht angegeben", star);
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());
         }
@@ -94,9 +104,7 @@ public class MessageController {
 
     }
 
-    @GetMapping("/{msg_id}")
-    public ResponseEntity<?> getSingleMessage(@PathVariable String msg_id,
-                                              @RequestParam String star){
+    public ResponseEntity<?> handleGetSingleMessage(String msg_id, String star){
         if(!messageService.validateStar(star)){
             log.info("star :{} ist inkorrekt oder nicht angegeben", star);
             return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED.getReasonPhrase());

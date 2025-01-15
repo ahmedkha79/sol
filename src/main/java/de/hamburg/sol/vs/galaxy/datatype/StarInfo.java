@@ -2,10 +2,9 @@ package de.hamburg.sol.vs.galaxy.datatype;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.Objects;
 
 @NoArgsConstructor
 @Data
@@ -34,4 +33,16 @@ public class StarInfo {
 
     @JsonProperty("status")
     private String status;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StarInfo starInfo)) return false;
+        return port == starInfo.port && Objects.equals(star, starInfo.star) && Objects.equals(sol, starInfo.sol) && Objects.equals(ipAddress, starInfo.ipAddress);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(star, sol, ipAddress, port);
+    }
 }

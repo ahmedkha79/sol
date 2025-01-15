@@ -5,7 +5,7 @@ import de.hamburg.sol.vs.client.model.instance.SolComponent;
 import de.hamburg.sol.vs.protocol.SolProtocol;
 import de.hamburg.sol.vs.utils.ProtocolHandler;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,7 @@ public class SystemHandlerSolComponent implements SystemHandler {
 
 
 
+    @Qualifier("dynamicSolComponent")
     private SolComponent solComponent;
 
     private RestTemplate restTemplate;

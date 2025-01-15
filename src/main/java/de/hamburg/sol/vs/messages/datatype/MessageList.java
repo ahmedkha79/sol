@@ -1,4 +1,4 @@
-package de.hamburg.sol.vs.server.messages.datatype;
+package de.hamburg.sol.vs.messages.datatype;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
