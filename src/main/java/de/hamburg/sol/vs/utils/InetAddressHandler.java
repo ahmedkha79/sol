@@ -1,20 +1,63 @@
 package de.hamburg.sol.vs.utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.net.*;
+import java.util.Enumeration;
 
 public class InetAddressHandler {
 
 
-    public static String getLocalHostAddress() {
+    private static String hostIp;
+
+    static  {
         try {
-            return InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null; //Eventuell Default-IpAdresse
+            hostIp = readHostEnvironmentVariable();
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+
+    public static String getLocalHostAddress() {
+      return hostIp;
+    }
+
+    private static String readHostEnvironmentVariable() throws SocketException {
+        String value = System.getenv("HOST_IP");
+        if(value != null){
+           return value;
+        } else {
+            return getHostIP();
+        }
+    }
+
+
+    public static String getHostIP() throws SocketException {
+        // Liste aller Netzwerkschnittstellen des Hosts abrufen
+        Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+
+        // Alle Netzwerkschnittstellen durchgehen
+        while (networkInterfaces.hasMoreElements()) {
+            NetworkInterface networkInterface = networkInterfaces.nextElement();
+
+            // Nur die nicht-loopback (physische) Netzwerkschnittstellen betrachten
+            if (networkInterface.isLoopback() || !networkInterface.isUp()) {
+                continue;
+            }
+
+            // Alle IP-Adressen dieser Schnittstelle durchgehen
+            Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+            while (inetAddresses.hasMoreElements()) {
+                InetAddress inetAddress = inetAddresses.nextElement();
+
+                // Wir suchen nach der ersten IPv4-Adresse, die nicht die Loopback-Adresse ist
+                if (inetAddress instanceof Inet4Address && !inetAddress.isLoopbackAddress()) {
+                    System.out.println(inetAddress.getHostAddress());
+                    return inetAddress.getHostAddress();
+                }
+            }
+        }
+        return null;
     }
 
 
