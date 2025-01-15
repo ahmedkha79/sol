@@ -13,7 +13,7 @@ public class GlobalConfig {
     private static String starUUID;
 
     private static final Integer DEFAULT_PORT = 8000;
-    private static final int DEFAULT_GROUP_ID = 131;
+    private static final int DEFAULT_GROUP_ID = 138;
     private static final int DEFAULT_GALAXY_ID = 200;
 
 
