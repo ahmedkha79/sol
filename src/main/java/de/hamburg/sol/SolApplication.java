@@ -14,6 +14,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,10 +41,11 @@ public class SolApplication {
     @Autowired
     BroadCastClient broadCastClient2;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SocketException {
         System.setProperty("spring.devtools.restart.enabled", "false");
         SpringApplication application = new SpringApplication(SolApplication.class);
         System.out.println(System.getProperty("user.dir"));
+        System.out.println("HostIP: " + getLocalHostAddress());
 
 
         try{
