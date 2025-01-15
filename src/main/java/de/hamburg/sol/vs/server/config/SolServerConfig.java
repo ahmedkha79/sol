@@ -1,5 +1,6 @@
 package de.hamburg.sol.vs.server.config;
 
+import de.hamburg.sol.vs.galaxy.model.GalaxyModel;
 import de.hamburg.sol.vs.server.instance.SolServer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,13 +17,16 @@ public class SolServerConfig {
 
     private final RestTemplate restTemplate;
 
-    public SolServerConfig(ScheduledExecutorService scheduler, RestTemplate restTemplate) {
+    private final GalaxyModel galaxyModel;
+
+    public SolServerConfig(ScheduledExecutorService scheduler, RestTemplate restTemplate, GalaxyModel galaxyModel) {
         this.scheduler = scheduler;
         this.restTemplate = restTemplate;
+        this.galaxyModel = galaxyModel;
     }
     @Bean
     @Lazy
     public SolServer solServer() throws SocketException, IllegalAccessException {
-        return new SolServer(scheduler,4, restTemplate);
+        return new SolServer(scheduler,4, restTemplate, galaxyModel);
     }
 }

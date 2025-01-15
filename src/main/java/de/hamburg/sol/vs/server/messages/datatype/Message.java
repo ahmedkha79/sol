@@ -44,4 +44,8 @@ public class Message {
 
     @JsonProperty("status")
     private String status;
+
+    public void updateChanged(){
+        this.changed=LocalDateTime.now();
+    }
 }

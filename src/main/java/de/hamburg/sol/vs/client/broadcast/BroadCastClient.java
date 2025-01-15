@@ -11,6 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -41,13 +42,17 @@ public class BroadCastClient implements Runnable {
 
     private final Integer STAR_PORT;
 
+    @Autowired
+    private Environment environment;
+
     @Setter
     private DatagramSocket udpSocket;
 
     private String ipAddress = getLocalHostAddress();
-    //TCP-Port
-    private ServerSocket serverSocket = new ServerSocket(0);
+//    //TCP-Port
+//    private ServerSocket serverSocket = new ServerSocket(0);
 
+    private int port;
     private final int REQUEST_Timeout = 20;
     private final int CHECK_RETRIES_INTERVAL = 2;
 
@@ -55,11 +60,14 @@ public class BroadCastClient implements Runnable {
 
     private ConcurrentLinkedQueue<String> responses;
 
-    public BroadCastClient() throws IllegalAccessException, IOException {
+    public BroadCastClient(Environment environment) throws IllegalAccessException, IOException {
         STAR_PORT = getStarPort();
         responses = new ConcurrentLinkedQueue<>();
         this.udpSocket = new DatagramSocket();
         this.udpSocket.setBroadcast(true);
+        this.environment = environment;
+        port = getStarPort();
+        //port = Integer.parseInt(environment.getProperty("server.port", "8080"));
 
 
 
@@ -106,19 +114,19 @@ public class BroadCastClient implements Runnable {
                                 log.info("Registrierung an Star: {} geschickt", solProtocol.getStar());
                                 if(registered){
                                     log.info("Erfolgreich im Star: {} registriert", solProtocol.getStar());
-                                    log.info("Solkomponente starten... mit Port: {}", serverSocket.getLocalPort());
+                                    log.info("Solkomponente starten... mit Port: {}", port);
 
 
                                     SolComponentFactory solComponentFactory = new SolComponentFactory(applicationContext);
                                     SolComponent solComponent = solComponentFactory.createSolComponent(solProtocol.getStar(),
                                             solProtocol.getSol(), solProtocol.getIpAddress(), solProtocol.getPort(), solProtocol.getComUUID(),
-                                            ipAddress, serverSocket.getLocalPort());
+                                            ipAddress, port);
 
                                     log.info("Solkomponente mit folgenden Werten: {}", solComponent);
 
 
 
-                                    serverSocket.close();
+                                    //serverSocket.close();
 
                                     isBroadcasting = false;
 
@@ -140,7 +148,8 @@ public class BroadCastClient implements Runnable {
                 log.info("Kein Stern wurde gefunden");
                 Thread solServerThread = new Thread(() -> {
                     SolServer solServer = applicationContext.getBean(SolServer.class);
-                    solServer.run();
+                    //solServer.run();
+                    solServer.start();
                 });
                 log.info("SolServer initialisieren");
                 solServerThread.start();
@@ -202,7 +211,7 @@ public class BroadCastClient implements Runnable {
                     .sol(solProtocol.getSol())
                     .comUUID(solProtocol.getComUUID())
                     .ipAddress(getLocalHostAddress())
-                    .port(serverSocket.getLocalPort())
+                    .port(port)
                     .status("200")
                     .build();
             log.debug("Registrierungsanfrage erzeugt ");
