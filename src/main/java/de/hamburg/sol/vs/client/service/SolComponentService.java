@@ -82,7 +82,15 @@ public class SolComponentService {
 
         if(!patchSuccessful){
             log.error("Verbindung zu Sol konnte nach {} Versuchen nicht hergestellt werden", retries);
-            solComponent.terminateComponent();
+            new Thread(() -> {
+                try {
+                    // Führe die Hintergrundaufgabe aus
+                    solComponent.terminateComponent();
+                    log.info("Komponente erfolgreich beendet.");
+                } catch (Exception e) {
+                    log.error("Fehler beim Beenden der Komponente: {}", e.getMessage());
+                }
+            }).start();
         }
     }
 
