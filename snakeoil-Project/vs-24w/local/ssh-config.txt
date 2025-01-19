@@ -1,0 +1,12 @@
+Host haw-usershell
+	Hostname usershell.informatik.haw-hamburg.de
+	Port 22
+	User infwxxnnn # TODO
+#	IdentityFile .../id_ed25519 # optional
+
+Host vs*.ful.informatik.haw-hamburg.de
+	Hostname 141.22.11.1nn # TODO
+	ProxyJump haw-usershell
+	Port 22
+	User sieheErstenPraktikumstermin # TODO
+#	IdentityFile .../id_ed25519 # optional
