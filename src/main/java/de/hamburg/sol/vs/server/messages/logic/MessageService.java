@@ -19,6 +19,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+
+/**
+ * Service, welches die Nachrichtenlogik kapselt
+ */
 @Service
 @Log4j2
 @Lazy
@@ -158,6 +162,10 @@ public class MessageService {
 
     }
 
+    /**
+     * Empfängt Nachricht und leitet sie an alle bekannten Sternen weiter
+     * @param message Nachricht die weitergeleitet wird
+     */
     public void receiveMessageAndSave(Message message){
         if(!messages.containsKey(message.getMsg_id())) {
             message.updateReceived();
@@ -167,6 +175,13 @@ public class MessageService {
         }
 
     }
+
+    /**
+     * Löscht eine Nachricht und leitet den Delete Request an alle Sterne weiter,
+     * an die die Nachricht weitergeleitet wurde
+     * @param msgUUID ID der Nachricht
+     * @param starUUID ID des Sterns
+     */
 
     public void receiveDeleteAndForward(String msgUUID, String starUUID){
         String deleteStatusMsg;

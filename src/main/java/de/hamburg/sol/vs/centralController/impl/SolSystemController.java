@@ -5,7 +5,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import de.hamburg.sol.vs.server.instance.*;
+import de.hamburg.sol.vs.client.model.instance.*;
 
+/**
+ * Spezifischer REST - Controller für die unterschiedlichen Implementierungen von DELETE und GET im
+ * Endpunkt /vs/v1/system für {@link SolComponent} und {@link SolServer}
+ */
 @RestController
 @RequestMapping("/vs/v1/system")
 public class SolSystemController {

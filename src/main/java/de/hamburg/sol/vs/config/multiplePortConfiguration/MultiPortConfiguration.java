@@ -14,6 +14,11 @@ import org.springframework.util.StringUtils;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Instanziiert zu Anfang, einen zweiten embedded Server für einen weiteren Port.
+ * Erlaubt das Lauschen auf zwei Ports
+ */
+
 @Configuration
 public class MultiPortConfiguration {
 

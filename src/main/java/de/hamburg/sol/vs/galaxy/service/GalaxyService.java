@@ -30,6 +30,10 @@ import static de.hamburg.sol.vs.utils.ProtocolHandler.convertJsonToObject;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
 
+
+/**
+ * Service, zuständig für die Galaxy Kommunikation zwischen Sternen
+ */
 @Service
 @Log4j2
 @Lazy
@@ -71,6 +75,10 @@ public class GalaxyService {
 
     }
 
+    /**
+     * Sendet jede 1min, eine Broadcast Nachricht an den GalaxyPort
+     */
+
     @Scheduled(fixedRate = 60000, initialDelay = 10000)
     public void sendGalaxyBroadcast(){
         log.info("Sending Galaxy Broadcast...");
@@ -79,6 +87,10 @@ public class GalaxyService {
 
 
     }
+
+    /**
+     * Lauscht auf Broadcast auf dem GalaxyPort
+     */
 
 
     public void listenForGalaxyBroadcast(){

@@ -10,6 +10,10 @@ import org.springframework.web.client.RestTemplate;
 import java.net.SocketException;
 import java.util.concurrent.ScheduledExecutorService;
 
+
+/**
+ * Konfiguration für den SolServer
+ */
 @Configuration
 public class SolServerConfig {
 

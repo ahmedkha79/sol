@@ -10,6 +10,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Filter, um unerlaubte Endpunktzugriffe über spezifische Ports zu verhindern
+ */
+
 @Component
 public class MultiPortFilter extends OncePerRequestFilter {
 

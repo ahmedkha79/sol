@@ -7,6 +7,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.support.GenericWebApplicationContext;
 
+
+/**
+ * Erzeugungsfabrik für {@link SolComponent}
+ * Stellt sicher, dass eine SolComponent, nur dann erzeugt wird, wenn gebraucht wird.
+ * Sichert eine dynamische Erzeugung eines {@link SolComponent} zur Laufzeit
+ */
 @Component
 public class SolComponentFactory {
 

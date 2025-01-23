@@ -17,6 +17,10 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 
+/**
+ * Service für {@link SolComponent}
+ */
+
 @Service
 @Log4j2
 @Lazy
@@ -38,6 +42,12 @@ public class SolComponentService {
         this.restTemplate = restTemplate;
     }
 
+
+    /**
+     * Startet in einem separaten Thread, einen Heart Beat Algorithmus der alle 30 Sekunden,
+     * ein Patch Request an Sol sendet.
+     * Nach zweimaliger, erfolglosem Patch schaltet der Service ab
+     */
 
     @Scheduled(fixedRate = 30000, initialDelay = 10000)
     public void sendPatchBeatChecks(){

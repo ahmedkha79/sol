@@ -8,6 +8,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
+/**
+ * Klasse, die je nachdem ob gerade {@link de.hamburg.sol.vs.client.model.instance.SolComponent} oder {@link de.hamburg.sol.vs.server.instance.SolServer}
+ * die entsprechende Implementierung injiziert
+ */
+
 @Configuration
 public class MessageHandlerConfig {
 

@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Enumeration;
 
+/**
+ * Hilfsklasse, für die Behandlung von Netzwerkinformationen
+ */
 public class InetAddressHandler {
 
 

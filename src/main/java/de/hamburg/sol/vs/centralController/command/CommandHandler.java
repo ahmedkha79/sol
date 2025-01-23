@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+
+/**
+ * Rest - Schnittstelle zum Beenden und für die Simulation von Crashes
+ */
+
 @Log4j2
 @RestController
 @RequestMapping("/vs/v1/system")

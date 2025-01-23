@@ -2,6 +2,11 @@ package de.hamburg.sol.vs.config.global;
 
 import lombok.extern.log4j.Log4j2;
 
+
+/**
+ * Zentrale Konfigurationsklasse, um Ports zu setzen.
+ * Umgebungsvariablen werden ausgelesen, ist dieser nicht gesetzt, wird ein Default-Port gewählt.
+ */
 @Log4j2
 public class GlobalConfig {
 

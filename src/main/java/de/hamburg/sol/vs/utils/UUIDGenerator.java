@@ -4,6 +4,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Random;
 
+/**
+ * Generator für die comUUID
+ */
 public class UUIDGenerator {
 
     private static Random RANDOM = new Random();

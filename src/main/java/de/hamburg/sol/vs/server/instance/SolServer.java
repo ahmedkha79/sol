@@ -33,7 +33,9 @@ import java.util.concurrent.*;
 
 import static de.hamburg.sol.vs.utils.ProtocolHandler.*;
 
-//Singleton
+/**
+ * Instanz, repräsentiert den SolServer.
+ */
 @Log4j2
 @Lazy
 public class SolServer {
@@ -106,27 +108,9 @@ public class SolServer {
     }
 
 
-//    @Override
-//    public void run() {
-//
-//
-//        this.running = true;
-//
-//
-//        log.info("Sol lauscht auf Broadcast am Port: {}", starPort);
-//
-//
-//        applicationContext.getBean(GalaxyService.class);
-//
-//
-//        while (running) {
-//            listenForBroadcastsRequests();
-//        }
-//
-//        stopServer();
-//    }
-
-
+    /**
+     * Initialisiert den SolServer und startet den {@link GalaxyService} und den StarListener
+     */
     public void start(){
         this.running = true;
         log.info("Solserver wird gestartet mit starUUID: {}", starUUID);
@@ -154,6 +138,11 @@ public class SolServer {
         stopServer();
         System.exit(0);
     }
+
+
+    /**
+     * Horcht auf dem StarPort, nach Anfragen von sternlosen Applikationen
+     */
 
     public void listenForBroadcastsRequests() {
 
@@ -187,6 +176,12 @@ public class SolServer {
 
     }
 
+    /**
+     * Sendet die eigenen Informationen an einen Anfrager
+     * @param address Adresse des Anfrager
+     * @param port Port auf den der Anfrager erreichbar ist
+     */
+
 
     protected void respondToHello(InetAddress address, int port) {
         try {
@@ -215,6 +210,11 @@ public class SolServer {
         return comUUIDQueue.contains(comUUID);
     }
 
+
+    /**
+     * Fügt eine Komponente nach erfolgreicher Registrierung hinzu
+     * @param componentInfo
+     */
     public void addComponent(ComponentInfo componentInfo) {
         if ((!activeComponents.containsKey(componentInfo.getComUUID()) && queueContainsComUUID(componentInfo.getComUUID()))) {
             putComponent(componentInfo);

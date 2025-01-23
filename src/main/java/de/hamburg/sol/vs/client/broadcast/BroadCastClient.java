@@ -29,6 +29,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static de.hamburg.sol.vs.config.global.GlobalConfig.getStarPort;
 import static de.hamburg.sol.vs.utils.InetAddressHandler.getLocalHostAddress;
 import static de.hamburg.sol.vs.utils.ProtocolHandler.convertJsonToObject;
+
+
+/**
+ * Initiale Komponente die nach einem Stern sucht.
+ */
 @Component
 @Scope("prototype")
 @Log4j2
@@ -49,8 +54,6 @@ public class BroadCastClient implements Runnable {
     private DatagramSocket udpSocket;
 
     private String ipAddress = getLocalHostAddress();
-//    //TCP-Port
-//    private ServerSocket serverSocket = new ServerSocket(0);
 
     private int port;
     private final int REQUEST_Timeout = 20;
@@ -67,8 +70,6 @@ public class BroadCastClient implements Runnable {
         this.udpSocket.setBroadcast(true);
         this.environment = environment;
         port = getStarPort();
-        //port = Integer.parseInt(environment.getProperty("server.port", "8080"));
-
 
 
     }
@@ -78,6 +79,12 @@ public class BroadCastClient implements Runnable {
         discoverStar();
     }
 
+
+    /**
+     * Thread, schickt zweimal alle 20 Sekunden einen Broadcast an einem gegebenen Port.
+     * Wird ein Stern gefunden, wird eine {@link SolComponent} erzeugt,
+     * sonst wird nach erfolgloser Suche ein {@link SolServer} gestartet.
+     */
 
     public void discoverStar(){
     new Thread(() -> {
@@ -124,9 +131,6 @@ public class BroadCastClient implements Runnable {
 
                                     log.info("Solkomponente mit folgenden Werten: {}", solComponent);
 
-
-
-                                    //serverSocket.close();
 
                                     isBroadcasting = false;
 
@@ -197,6 +201,9 @@ public class BroadCastClient implements Runnable {
         }
 
 
+    /*
+    Sendet ein POST Request an dem Stern, von der er die Nachricht erhalten hat
+     */
 
     private boolean registerWithSol(SolProtocol solProtocol){
         String url = String.format("http://%s:%d/vs/v1/system", solProtocol.getIpAddress(), solProtocol.getPort());

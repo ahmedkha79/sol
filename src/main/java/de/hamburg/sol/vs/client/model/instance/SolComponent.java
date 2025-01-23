@@ -6,6 +6,11 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+
+/**
+ * SolComponent, wird mithilfe {@link de.hamburg.sol.vs.client.model.factory.SolComponentFactory} instanziiert.
+ * Speichert Informationen des mit verbundenen Sol
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
